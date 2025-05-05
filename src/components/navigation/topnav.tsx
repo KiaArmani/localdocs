@@ -1,12 +1,13 @@
 'use client'
 
+import React from 'react'
 import { ThemeToggle } from '../theme-toggle'
 import { MobileNav } from './mobile-nav'
 import { Logo } from './logo'
 import { Button } from '../ui/button'
 import Link from 'next/link'
 import { SiGithub } from '@icons-pack/react-simple-icons'
-import { ExternalLinkIcon, Edit3Icon, EyeIcon, Save, Check, AlertCircle, Loader2 } from 'lucide-react'
+import { ExternalLinkIcon, Edit3Icon, EyeIcon, Save, Check, AlertCircle, Loader2, PlusCircle } from 'lucide-react'
 import { GithubButton } from '../github-button'
 import { useEditMode } from '@/contexts/EditModeContext'
 import { useSaveContext } from '@/contexts/SaveContext'
@@ -14,6 +15,10 @@ import { useSaveContext } from '@/contexts/SaveContext'
 export const TopNav = () => {
   const { isEditing, toggleEditMode } = useEditMode()
   const { saveState, triggerSave } = useSaveContext()
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
+  const [isNewPageModalOpen, setIsNewPageModalOpen] = React.useState(false)
+
+  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen)
 
   const SaveButtonIcon = () => {
     switch (saveState) {
@@ -63,6 +68,16 @@ export const TopNav = () => {
                 <SaveButtonIcon />
               </Button>
             )}
+            {isEditing && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsNewPageModalOpen(true)}
+                aria-label="Create New Page"
+              >
+                <PlusCircle className="h-5 w-5" />
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={toggleEditMode} aria-label={isEditing ? 'Switch to view mode' : 'Switch to edit mode'}>
               {isEditing ? <EyeIcon size={16} /> : <Edit3Icon size={16} />}
             </Button>
@@ -90,6 +105,13 @@ export const TopNav = () => {
           <MobileNav />
         </nav>
       </div>
+
+      {isNewPageModalOpen && (
+        <div style={{ position: 'fixed', top: '20%', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '2rem', border: '1px solid black', zIndex: 100 }}>
+          New Page Modal Content Goes Here
+          <button onClick={() => setIsNewPageModalOpen(false)}>Close</button>
+        </div>
+      )}
     </header>
   )
 }

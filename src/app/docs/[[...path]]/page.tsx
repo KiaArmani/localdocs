@@ -116,10 +116,10 @@ export default function Page({ params }: PageProps) {
 
   const currentNavName = useMemo(() => {
       if (isNavLoading || !navigation || navigation.length === 0) {
-          return \"\";
+          return "";
       }
       const foundName = findNodeNameByHref(navigation, currentPageHref);
-      return foundName || \"\";
+      return foundName || "";
   }, [navigation, isNavLoading, currentPageHref, findNodeNameByHref]);
 
   // Parse markdown for TOC whenever it changes
