@@ -1,70 +1,93 @@
+'use client';
+
 import Cards from '@/components/cards'
 import { Toc } from '@/components/navigation/toc'
 import { InlineMdxEditor } from '@/components/editor/InlineMdxEditor'
 import { getRawDocBySlug } from '@/lib/docs'
 import { mdxComponents } from '@prose-ui/next'
 import { allPages } from 'content-collections'
-import { Metadata } from 'next'
 import pathModule from 'path'
+import { useEditMode } from '@/contexts/EditModeContext'
+import React, { useEffect, useState } from 'react'
 
-type Params = { path: string[] }
-type Props = {
-  params: Params
+type PageProps = {
+  params: { path: string[] }
 }
 
-const findPage = (pathArr: string[]) => {
-  const path = pathArr ? `/${pathArr.join('/')}` : '/'
-  return allPages.find((page) => page.path === path)
-}
+export default function Page({ params }: PageProps) {
+  const { isEditing } = useEditMode();
+  const pagePathArray = params.path ?? [];
 
-export async function generateStaticParams() {
-  return allPages.map((page) => ({
-    path: page.path.slice(1).split('/'),
-  }))
-}
+  const [rawDoc, setRawDoc] = useState<{ content: string; data: Record<string, any> } | null>(null);
+  const [pageMeta, setPageMeta] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
-  const path = params.path ?? []
-  let page = findPage(path)
-  const title = page ? `${page.title} - Prose UI Docs Starter` : 'Prose UI Docs Starter'
-  return {
-    title,
-  }
-}
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const slugToFetch = pagePathArray.length === 0 ? ['index'] : pagePathArray;
+        const fetchedRawDoc = await getRawDocBySlug(slugToFetch);
+        setRawDoc(fetchedRawDoc);
 
-export default async function Page({ params }: { params: Params }) {
-  const pagePathArray = params.path ?? []
+        const path = pagePathArray.length > 0 ? `/${pagePathArray.join('/')}` : '/'
+        let fetchedPageMeta = allPages.find((page) => page.path === path);
 
-  let pageMeta = findPage(pagePathArray)
+        if (!fetchedPageMeta) {
+          fetchedPageMeta = {
+            title: pathModule.basename(pagePathArray.join('/') || 'index'),
+            toc: [],
+            path: path
+          } as any;
+        }
+        setPageMeta(fetchedPageMeta);
 
-  let rawDoc
-  try {
-    const slugToFetch = pagePathArray.length === 0 ? ['index'] : pagePathArray
-    rawDoc = await getRawDocBySlug(slugToFetch)
-  } catch (error) {
-    console.error("Failed to load raw doc:", error)
+      } catch (err) {
+        console.error("Failed to load doc data:", err);
+        setError("Error loading document content.");
+        setRawDoc(null);
+        setPageMeta(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [pagePathArray]);
+
+  if (loading) {
     return (
       <div className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
-        <p>Error loading document content.</p>
+        <p>Loading...</p>
       </div>
-    )
+    );
   }
 
-  if (!pageMeta) {
-    pageMeta = {
-      title: pathModule.basename(pagePathArray.join('/') || 'index'),
-      toc: [],
-    } as any
+  if (error || !rawDoc) {
+    return (
+      <div className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
+        <p>{error || "Document not found."}</p>
+      </div>
+    );
   }
+
+  const tocSections = pageMeta?.toc ?? [];
 
   return (
     <>
       <article className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
-        <InlineMdxEditor markdown={rawDoc.content} slug={pagePathArray} />
+        <InlineMdxEditor
+          key={pagePathArray.join('/')}
+          markdown={rawDoc.content}
+          slug={pagePathArray}
+          isEditing={isEditing}
+        />
       </article>
 
       <div className="sticky top-[var(--topnav-height)] hidden h-[calc(100vh-var(--topnav-height))] w-[var(--toc-width)] shrink-0 flex-col pt-[var(--article-padding-t)] lg:flex">
-        <Toc sections={pageMeta?.toc ?? []} />
+        <Toc sections={tocSections} />
       </div>
     </>
   )
