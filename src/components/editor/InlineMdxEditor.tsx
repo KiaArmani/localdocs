@@ -12,11 +12,42 @@ import {
   markdownShortcutPlugin,
   toolbarPlugin,
   codeBlockPlugin, // Basic code block support
-  // We'll add more plugins later (JSX, DiffSource, etc.)
+  // Import JSX Plugin and related types
+  jsxPlugin,
+  type JsxComponentDescriptor
 } from '@mdxeditor/editor';
 
 // Import default CSS
 import '@mdxeditor/editor/style.css';
+
+// Assuming components like Callout and Cards are used
+// We might need to import the actual components if descriptors need specifics
+// import { Callout, Cards } from '@/components/???'; // Adjust path if needed
+
+// Define descriptors for known components
+const defaultJsxComponents: JsxComponentDescriptor[] = [
+  {
+    name: 'Callout',
+    kind: 'text', // or 'flow' or 'block' depending on usage
+    props: [
+      { name: 'type', type: 'string' }, // Example prop
+      { name: 'title', type: 'string' }, // Example prop
+    ],
+    // If it can contain other markdown/jsx, set hasChildren: true
+    hasChildren: true,
+    // Optional: editor for the component
+    // editor: ({ children }) => <div> Callout Editor Placeholder {children} </div>
+  },
+  {
+    name: 'Cards',
+    kind: 'block', // Assuming Cards is a block-level element
+    props: [], // Add props if Cards takes any
+    hasChildren: true, // Assuming Cards wraps individual Card components
+    // Optional: editor for the component
+    // editor: ({ children }) => <div> Cards Editor Placeholder {children} </div>
+  },
+  // Add descriptors for other custom components here
+];
 
 interface InlineMdxEditorProps {
   markdown: string;
@@ -60,6 +91,12 @@ export function InlineMdxEditor({ markdown: initialMarkdown, slug }: InlineMdxEd
           // Toolbar Plugin - Needs to be configured
           toolbarPlugin({
             toolbarContents: SimpleToolbar // Use the SimpleToolbar component
+          }),
+          // Add the configured JSX Plugin
+          jsxPlugin({
+            jsxComponentDescriptors: defaultJsxComponents,
+            // Optional: A fallback editor for components without specific descriptors
+            // defaultEditor: ({ children }) => <div> Default JSX Editor {children} </div>
           }),
           // Add more plugins as needed
         ]}
