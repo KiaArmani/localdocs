@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 // Import MDXEditor and necessary plugins
 import {
   MDXEditor,
@@ -28,8 +28,8 @@ import {
 // Import default CSS
 import '@mdxeditor/editor/style.css';
 
-// Import Save icon from lucide-react instead
-import { Save } from 'lucide-react';
+// Import the save context hook
+import { useSaveContext, type SaveState } from '@/contexts/SaveContext';
 
 // Assuming components like Callout and Cards are used
 // We might need to import the actual components if descriptors need specifics
@@ -104,54 +104,15 @@ interface InlineMdxEditorProps {
   isEditing: boolean;
 }
 
-// Define save states
-type SaveState = 'idle' | 'saving' | 'saved' | 'error';
-
-// Toolbar component including Save button and logic
+// Toolbar component - Remove Save button and related props
 const SimpleToolbar = ({
   components,
   editorRef,
-  currentMarkdown,
-  frontmatter,
-  slug,
-  onSaveStateChange,
 }: {
   components: any;
   editorRef: React.RefObject<MDXEditorMethods>;
-  currentMarkdown: string;
-  frontmatter: Record<string, any>;
-  slug: string[];
-  onSaveStateChange: (state: SaveState, message?: string) => void;
 }) => {
-  const handleSave = useCallback(async () => {
-    onSaveStateChange('saving');
-    try {
-      const response = await fetch('/api/docs/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug: slug,
-          content: currentMarkdown, // Send current markdown state
-          frontmatter: frontmatter, // Send current frontmatter
-        }),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to save document');
-      }
-
-      onSaveStateChange('saved', 'Document saved successfully!');
-      // Optionally reset state back to idle after a delay
-      setTimeout(() => onSaveStateChange('idle'), 2000);
-    } catch (error: any) {
-      console.error("Save error:", error);
-      onSaveStateChange('error', error.message || 'An unexpected error occurred.');
-    }
-  }, [currentMarkdown, frontmatter, slug, onSaveStateChange]);
-
-  if (!components) return null; // Add guard clause back
+  if (!components) return null;
 
   return (
     <components.ToolbarRoot>
@@ -173,18 +134,6 @@ const SimpleToolbar = ({
       {/* Undo/Redo Example (using components directly) */}
       <components.Undo />
       <components.Redo />
-      <components.Separator />
-
-      {/* Save Button */}
-      <button
-        type="button"
-        onClick={handleSave}
-        className="ml-auto p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" // Basic styling, adjust as needed
-        aria-label="Save Document"
-      >
-        {/* Use lucide-react Save icon */}
-        <Save className="w-5 h-5" />
-      </button>
     </components.ToolbarRoot>
   );
 };
@@ -196,45 +145,55 @@ export function InlineMdxEditor({
   isEditing
 }: InlineMdxEditorProps) {
   const [markdown, setMarkdown] = useState(initialMarkdown);
-  // Store frontmatter separately - MDXEditor doesn't manage it directly
-  // In a real app, you might use a plugin or lift state higher
   const [frontmatter, setFrontmatter] = useState(initialFrontmatter);
-  const [saveState, setSaveState] = useState<SaveState>('idle');
-  const [saveMessage, setSaveMessage] = useState<string>('');
 
-  const editorRef = React.useRef<MDXEditorMethods>(null); // Ref for editor methods
+  // Use save context
+  const { registerSaveHandler, setSaveStatus } = useSaveContext();
+
+  const editorRef = React.useRef<MDXEditorMethods>(null);
+
+  // The actual save logic remains here but is registered via context
+  const handleSave = useCallback(async () => {
+    setSaveStatus('saving');
+    try {
+      const response = await fetch('/api/docs/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: slug,
+          content: markdown, // Use current state markdown
+          frontmatter: frontmatter, // Use current state frontmatter
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Failed to save document');
+      }
+      setSaveStatus('saved', 'Document saved!'); // Status handled by context now
+    } catch (error: any) {
+      console.error("Save error:", error);
+      setSaveStatus('error', error.message || 'An unexpected error occurred.');
+    }
+  }, [markdown, frontmatter, slug, setSaveStatus]);
+
+  // Register the save handler with the context
+  useEffect(() => {
+    registerSaveHandler(handleSave);
+    // Cleanup function if needed, though likely not for this registration
+    // return () => registerSaveHandler(() => Promise.resolve());
+  }, [registerSaveHandler, handleSave]); // Rerun if handler changes
 
   useEffect(() => {
     setMarkdown(initialMarkdown);
-    setFrontmatter(initialFrontmatter); // Reset frontmatter on navigation
-    setSaveState('idle'); // Reset save state
-    setSaveMessage('');
+    setFrontmatter(initialFrontmatter);
+    // Reset context save state on navigation?
+    // setSaveStatus('idle'); // Maybe not - keep status across navigations?
   }, [initialMarkdown, initialFrontmatter]);
 
-  const handleSaveStateChange = useCallback((state: SaveState, message: string = '') => {
-    setSaveState(state);
-    setSaveMessage(message);
-  }, []);
-
   return (
-    <div className="prose dark:prose-invert max-w-none w-full relative">
-      {/* Display Save Status */}
-      {isEditing && saveState !== 'idle' && (
-        <div
-          className={`absolute top-0 right-0 mt-12 mr-2 px-2 py-1 text-xs rounded z-20 ${ 
-            saveState === 'saving' ? 'bg-yellow-100 text-yellow-800' :
-            saveState === 'saved' ? 'bg-green-100 text-green-800' :
-            saveState === 'error' ? 'bg-red-100 text-red-800' : ''
-          }`}
-        >
-          {saveState === 'saving' && 'Saving...'}
-          {saveState === 'saved' && ('Saved!' + (saveMessage ? ` ${saveMessage}` : ''))}
-          {saveState === 'error' && ('Error: ' + (saveMessage || 'Save failed'))}
-        </div>
-      )}
-
+    <div className="prose dark:prose-invert max-w-none w-full">
       <MDXEditor
-        ref={editorRef} // Attach ref
+        ref={editorRef}
         key={slug.join('/')}
         markdown={markdown}
         onChange={isEditing ? setMarkdown : undefined}
@@ -252,10 +211,6 @@ export function InlineMdxEditor({
               <SimpleToolbar
                 components={components}
                 editorRef={editorRef}
-                currentMarkdown={markdown}
-                frontmatter={frontmatter}
-                slug={slug}
-                onSaveStateChange={handleSaveStateChange}
               />
             ) : () => null
           }),

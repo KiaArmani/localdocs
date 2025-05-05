@@ -4,6 +4,7 @@ import './globals.css'
 import { ThemeProvider } from 'next-themes'
 import { TopNav } from '@/components/navigation/topnav'
 import { EditModeProvider } from '@/contexts/EditModeContext'
+import { SaveProvider } from '@/contexts/SaveContext'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -53,19 +54,21 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="bg-color-base min-h-screen font-sans antialiased">
-        <EditModeProvider>
-          <ThemeProvider
-            attribute="class"
-            defaultTheme="system"
-            enableSystem
-            disableTransitionOnChange
-          >
-            <>
-              <TopNav />
-              {children}
-            </>
-          </ThemeProvider>
-        </EditModeProvider>
+        <SaveProvider>
+          <EditModeProvider>
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              <>
+                <TopNav />
+                {children}
+              </>
+            </ThemeProvider>
+          </EditModeProvider>
+        </SaveProvider>
       </body>
     </html>
   )
