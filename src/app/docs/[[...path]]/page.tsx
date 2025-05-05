@@ -3,7 +3,6 @@
 import Cards from '@/components/cards'
 import { Toc } from '@/components/navigation/toc'
 import { InlineMdxEditor } from '@/components/editor/InlineMdxEditor'
-import { getRawDocBySlug } from '@/lib/docs'
 import { mdxComponents } from '@prose-ui/next'
 import { allPages } from 'content-collections'
 import pathModule from 'path'
@@ -27,9 +26,20 @@ export default function Page({ params }: PageProps) {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
+      const slugPath = pagePathArray.join('/') || 'index';
+      const apiPath = `/api/docs/content/${slugPath}`;
+
       try {
-        const slugToFetch = pagePathArray.length === 0 ? ['index'] : pagePathArray;
-        const fetchedRawDoc = await getRawDocBySlug(slugToFetch);
+        const response = await fetch(apiPath);
+
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error('Document not found.');
+          } else {
+            throw new Error(`API error: ${response.statusText}`);
+          }
+        }
+        const fetchedRawDoc = await response.json();
         setRawDoc(fetchedRawDoc);
 
         const path = pagePathArray.length > 0 ? `/${pagePathArray.join('/')}` : '/'
@@ -44,9 +54,9 @@ export default function Page({ params }: PageProps) {
         }
         setPageMeta(fetchedPageMeta);
 
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to load doc data:", err);
-        setError("Error loading document content.");
+        setError(err.message || "Error loading document content.");
         setRawDoc(null);
         setPageMeta(null);
       } finally {

@@ -17,7 +17,11 @@ import {
   type JsxComponentDescriptor,
   // Import type for JSX Editor Props
   type JsxEditorProps,
-  type SandpackConfig // Example if needed for code blocks
+  // Import components for toolbar directly
+  headingsPlugin as headingsPluginToolbar,
+  listsPlugin as listsPluginToolbar,
+  quotePlugin as quotePluginToolbar,
+  thematicBreakPlugin as thematicBreakPluginToolbar
 } from '@mdxeditor/editor';
 
 // Import default CSS
@@ -66,29 +70,24 @@ interface InlineMdxEditorProps {
   isEditing: boolean;
 }
 
-// Update SimpleToolbar to correctly receive components
-// Let TypeScript infer the type of `components`
-const SimpleToolbar = ({ components }: { components: any }) => {
-  // Use optional chaining just in case components is somehow still undefined
-  if (!components) return null;
-
+// Define the toolbar structure directly
+const SimpleToolbar = () => {
   return (
-    <components.ToolbarRoot>
-      <components.H1 />
-      <components.H2 />
-      <components.H3 />
-      <components.Separator />
-      <components.BulletedList />
-      <components.OrderedList />
-      <components.Separator />
-      <components.Blockquote />
-      <components.ThematicBreak />
-      <components.Separator />
-      <components.CreateLink />
-      {/* Add Code block button example */}
-      <components.CodeBlock />
+    <toolbarPlugin.Toolbar>
+      <headingsPluginToolbar.toolbarContents.H1 />
+      <headingsPluginToolbar.toolbarContents.H2 />
+      <headingsPluginToolbar.toolbarContents.H3 />
+      <toolbarPlugin.toolbarContents.Separator />
+      <listsPluginToolbar.toolbarContents.BulletedList />
+      <listsPluginToolbar.toolbarContents.OrderedList />
+      <toolbarPlugin.toolbarContents.Separator />
+      <quotePluginToolbar.toolbarContents.Blockquote />
+      <thematicBreakPluginToolbar.toolbarContents.ThematicBreak />
+      <toolbarPlugin.toolbarContents.Separator />
+      <linkPlugin.toolbarContents.CreateLink />
+      <codeBlockPlugin.toolbarContents.CodeBlock />
       {/* Add Save button later */}
-    </components.ToolbarRoot>
+    </toolbarPlugin.Toolbar>
   );
 };
 
@@ -100,12 +99,6 @@ export function InlineMdxEditor({ markdown: initialMarkdown, slug, isEditing }: 
   useEffect(() => {
     setMarkdown(initialMarkdown);
   }, [initialMarkdown]);
-
-  // Example Sandpack config (replace with actual setup if needed)
-  const simpleSandpackConfig: SandpackConfig = {
-    defaultPreset: 'react',
-    presets: [],
-  };
 
   return (
     // Apply Prose styles for consistent rendering with the rest of the site
@@ -125,10 +118,11 @@ export function InlineMdxEditor({ markdown: initialMarkdown, slug, isEditing }: 
           quotePlugin(),
           thematicBreakPlugin(),
           markdownShortcutPlugin(),
-          codeBlockPlugin({ defaultCodeBlockLanguage: 'tsx', sandpackConfig: simpleSandpackConfig }),
-          // Conditionally render toolbar based on isEditing state
+          // Remove sandpackConfig from codeBlockPlugin
+          codeBlockPlugin({ defaultCodeBlockLanguage: 'tsx' }),
+          // Pass SimpleToolbar directly to toolbarContents
           toolbarPlugin({
-            toolbarContents: isEditing ? (components) => <SimpleToolbar components={components} /> : () => null
+            toolbarContents: isEditing ? () => <SimpleToolbar /> : () => null
           }),
           jsxPlugin({
             jsxComponentDescriptors: defaultJsxComponents,

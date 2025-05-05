@@ -35,14 +35,14 @@ export const TopNav = () => {
                 Github
               </Link>
             </Button>
-            <Button variant="outline" size="icon" onClick={toggleEditMode} aria-label={isEditing ? 'Switch to view mode' : 'Switch to edit mode'}>
+            <Button variant="ghost" size="icon" onClick={toggleEditMode} aria-label={isEditing ? 'Switch to view mode' : 'Switch to edit mode'}>
               {isEditing ? <EyeIcon size={16} /> : <Edit3Icon size={16} />}
             </Button>
             <ThemeToggle />
           </div>
         </div>
         <nav className="flex flex-1 items-center justify-end gap-2 md:hidden">
-          <Button variant="outline" size="icon" onClick={toggleEditMode} aria-label={isEditing ? 'Switch to view mode' : 'Switch to edit mode'}>
+          <Button variant="ghost" size="icon" onClick={toggleEditMode} aria-label={isEditing ? 'Switch to view mode' : 'Switch to edit mode'}>
             {isEditing ? <EyeIcon size={16} /> : <Edit3Icon size={16} />}
           </Button>
           <GithubButton />
