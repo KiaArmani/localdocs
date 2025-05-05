@@ -11,14 +11,89 @@ import { ExternalLinkIcon, Edit3Icon, EyeIcon, Save, Check, AlertCircle, Loader2
 import { GithubButton } from '../github-button'
 import { useEditMode } from '@/contexts/EditModeContext'
 import { useSaveContext } from '@/contexts/SaveContext'
+// Shadcn UI Imports for Modal
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { useRouter } from 'next/navigation'
+import { useNavigation, NavigationNode } from '@/contexts/NavigationContext'
+
+// Simple function to generate a URL-safe slug segment from a title (duplicate from API, consider moving to utils)
+function slugify(title: string): string {
+    return title
+        .toLowerCase()
+        .trim()
+        .replace(/\s+/g, '-')
+        .replace(/[^a-z0-9-]/g, '')
+        .replace(/-+/g, '-');
+}
 
 export const TopNav = () => {
   const { isEditing, toggleEditMode } = useEditMode()
   const { saveState, triggerSave } = useSaveContext()
+  const { navigation, isLoading: isNavLoading, error: navError } = useNavigation(); // Get navigation data
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false)
   const [isNewPageModalOpen, setIsNewPageModalOpen] = React.useState(false)
+  // State for the new page form inputs
+  const [newPageTitle, setNewPageTitle] = React.useState('')
+  const [createError, setCreateError] = React.useState<string | null>(null)
+  const [isCreating, setIsCreating] = React.useState(false)
+  const router = useRouter()
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen)
+
+  // Handle title change - only sets title now
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewPageTitle(e.target.value)
+    setCreateError(null) // Clear error on input change
+  }
+
+  // Handle Create Page logic - Simplified
+  const handleCreatePage = async () => {
+    const pageSlug = slugify(newPageTitle)
+    if (!newPageTitle || !pageSlug) {
+        setCreateError("Title cannot be empty and must generate a valid slug segment.")
+        return
+    }
+
+    setIsCreating(true)
+    setCreateError(null)
+
+    try {
+        const response = await fetch('/api/docs/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            // Send only title. API will create at root and derive slug.
+            body: JSON.stringify({ title: newPageTitle }),
+        })
+
+        const result = await response.json()
+
+        if (!response.ok) {
+            throw new Error(result.message || `API Error: ${response.status}`)
+        }
+
+        // Success!
+        setNewPageTitle('') // Reset form
+        setIsNewPageModalOpen(false)
+        // Force a full reload to the new page path (returned by API)
+        window.location.href = result.path
+
+    } catch (error: any) {
+        console.error("Failed to create page:", error)
+        setCreateError(error.message || "An unexpected error occurred.")
+    } finally {
+        setIsCreating(false)
+    }
+  }
 
   const SaveButtonIcon = () => {
     switch (saveState) {
@@ -106,12 +181,45 @@ export const TopNav = () => {
         </nav>
       </div>
 
-      {isNewPageModalOpen && (
-        <div style={{ position: 'fixed', top: '20%', left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '2rem', border: '1px solid black', zIndex: 100 }}>
-          New Page Modal Content Goes Here
-          <button onClick={() => setIsNewPageModalOpen(false)}>Close</button>
-        </div>
-      )}
+      {/* New Page Modal Implementation */}
+      <Dialog open={isNewPageModalOpen} onOpenChange={setIsNewPageModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Page</DialogTitle>
+            <DialogDescription>
+              Enter the title for your new documentation page. The URL slug will be generated automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="newPageTitleInput" className="text-right">
+                Title
+              </Label>
+              <Input
+                id="newPageTitleInput"
+                value={newPageTitle}
+                onChange={handleTitleChange}
+                className="col-span-3"
+                placeholder="My Awesome Feature"
+                disabled={isCreating}
+              />
+            </div>
+            {createError && (
+              <p className="col-span-4 text-center text-sm text-red-600">{createError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button type="button" variant="secondary" disabled={isCreating}>Cancel</Button>
+            </DialogClose>
+            <Button type="button" onClick={handleCreatePage} disabled={isCreating || !newPageTitle}>
+              {isCreating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Create Page
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </header>
   )
 }
