@@ -7,13 +7,13 @@ export async function POST(request: Request) {
   try {
     const { slug, content, frontmatter } = await request.json();
 
-    // Validate input
-    if (!slug || !Array.isArray(slug) || slug.length === 0 || typeof content !== 'string') {
-      return NextResponse.json({ message: 'Invalid request body' }, { status: 400 });
+    // Adjust validation: Allow empty slug array (represents root/index)
+    if (!slug || !Array.isArray(slug) || typeof content !== 'string') { // Removed slug.length === 0 check
+      return NextResponse.json({ message: 'Invalid request body - slug missing or content not string' }, { status: 400 });
     }
 
-    // Reconstruct the file path (similar to GET route)
-    const effectiveSlug = slug.length === 0 || (slug.length === 1 && slug[0] === 'index') ? ['index'] : slug;
+    // Reconstruct the file path (same logic as GET route)
+    const effectiveSlug = slug.length === 0 ? ['index'] : slug;
     const filePath = path.join(process.cwd(), 'content', 'docs', ...effectiveSlug) + '.mdx';
 
     // Combine frontmatter and content using gray-matter

@@ -104,13 +104,13 @@ interface InlineMdxEditorProps {
   isEditing: boolean;
 }
 
-// Toolbar component - Remove Save button and related props
+// Toolbar component - Update editorRef type to allow null
 const SimpleToolbar = ({
   components,
   editorRef,
 }: {
   components: any;
-  editorRef: React.RefObject<MDXEditorMethods>;
+  editorRef: React.RefObject<MDXEditorMethods | null>; // Allow null
 }) => {
   if (!components) return null;
 
@@ -161,8 +161,8 @@ export function InlineMdxEditor({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           slug: slug,
-          content: markdown, // Use current state markdown
-          frontmatter: frontmatter, // Use current state frontmatter
+          content: markdown,
+          frontmatter: frontmatter,
         }),
       });
       const result = await response.json();
@@ -207,12 +207,7 @@ export function InlineMdxEditor({
           markdownShortcutPlugin(),
           codeBlockPlugin({ defaultCodeBlockLanguage: 'tsx' }),
           toolbarPlugin({
-            toolbarContents: isEditing ? (components) => (
-              <SimpleToolbar
-                components={components}
-                editorRef={editorRef}
-              />
-            ) : () => null
+            toolbarContents: isEditing ? SimpleToolbar : undefined
           }),
           jsxPlugin({
             jsxComponentDescriptors: defaultJsxComponents,
