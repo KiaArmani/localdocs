@@ -16,6 +16,7 @@ type Props = {
 }
 
 export const Toc = ({ sections }: Props) => {
+  console.log('[Toc Component] Received sections prop:', sections);
   const [currentSectionId, setCurrentSectionId] = useState(sections?.[0]?.id)
   const scrollHandlerLocked = useRef(false)
   sections = sections.filter((section) => [2, 3].includes(section.depth))
@@ -116,6 +117,17 @@ type ItemProps = {
 }
 
 const Item = ({ section, active, onClick }: ItemProps) => {
+  // Decode HTML entities from the title for display
+  let displayTitle = section.title;
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = section.title;
+    displayTitle = textarea.value;
+  } catch (e) {
+    console.error("[Toc Item Decode] Error decoding HTML entities:", e);
+    // displayTitle remains the original title if decoding fails
+  }
+
   return (
     <li>
       <Button
@@ -126,7 +138,7 @@ const Item = ({ section, active, onClick }: ItemProps) => {
         className={classes(section.depth < 3 ? 'pl-0' : 'pl-3', 'text-wrap')}
       >
         <Link href={`#${section.id}`} onClick={onClick}>
-          {section.title}
+          {displayTitle}
         </Link>
       </Button>
     </li>

@@ -92,6 +92,7 @@ export default function Page({ params }: PageProps) {
 
   // Parse markdown for TOC whenever it changes
   useEffect(() => {
+    console.log('[Page useEffect] TOC parsing triggered by markdown change.');
     const newTocSections: Section[] = [];
     headingRegex.lastIndex = 0;
     let match;
@@ -110,11 +111,13 @@ export default function Page({ params }: PageProps) {
       const id = finalText.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'section';
       newTocSections.push({ depth: level, title: finalText, id });
     }
+    console.log('[Page useEffect] Generated newTocSections:', newTocSections);
     setTocSections(newTocSections);
   }, [markdown]);
 
   // Handler for editor changes
   const handleMarkdownChange = useCallback((newMarkdown: string) => {
+    console.log('[Page handleMarkdownChange] Markdown changed:', newMarkdown.substring(0, 100) + '...');
     setMarkdown(newMarkdown);
   }, []);
 
