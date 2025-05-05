@@ -98,7 +98,8 @@ export default function Page({ params }: PageProps) {
     while ((match = headingRegex.exec(markdown)) !== null) {
       const level = match[1].length;
       const rawText = match[2].trim();
-      const text = rawText.replace(/&#x20;/g, ' ');
+      // Decode space entities and unescape hash symbols
+      const text = rawText.replace(/&#x20;/g, ' ').replace(/\#/g, '#');
       const id = text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'section';
       newTocSections.push({ depth: level, title: text, id });
     }
