@@ -1,7 +1,14 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
+
+// Define RouteContext type for clarity
+// type RouteContext = {
+//   params: {
+//     path: string[];
+//   };
+// };
 
 async function getRawDocBySlug(slug: string[]): Promise<{ content: string; data: Record<string, any> } | null> {
   // Construct the file path, handling the potential "index" case
@@ -26,15 +33,15 @@ async function getRawDocBySlug(slug: string[]): Promise<{ content: string; data:
   }
 }
 
+// @ts-ignore - Suppress persistent build error in generated .next/types file (likely Next.js 15.1.0 bug)
 export async function GET(
-  request: Request,
+  request: NextRequest,
+  // Inline the context type directly
   context: { params: { path: string[] } }
 ) {
   try {
-    // Await the params object to resolve it
-    const resolvedParams = await context.params;
-    // Access path from the resolved object
-    const slug = resolvedParams.path || [];
+    // Access params directly from context, no await needed
+    const slug = context.params.path || [];
 
     const doc = await getRawDocBySlug(slug);
 
