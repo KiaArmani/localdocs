@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import Cards from '@/components/cards'
 import { Toc } from '@/components/navigation/toc'
 import { InlineMdxEditor } from '@/components/editor/InlineMdxEditor'
@@ -9,6 +9,7 @@ import { allPages } from 'content-collections'
 import pathModule from 'path'
 import { useEditMode } from '@/contexts/EditModeContext'
 import { useSaveContext } from '@/contexts/SaveContext'
+import { useNavigation, NavigationNode } from '@/contexts/NavigationContext'
 
 // Define TocEntry used internally for parsing
 interface TocEntry {
@@ -39,6 +40,7 @@ export default function Page({ params }: PageProps) {
 
   const { isEditing } = useEditMode();
   const { registerSaveHandler, setSaveStatus } = useSaveContext();
+  const { navigation, updateNavigationNodeName, isLoading: isNavLoading, error: navError } = useNavigation();
 
   // Lifted markdown state
   const [markdown, setMarkdown] = useState<string>('');
@@ -89,6 +91,36 @@ export default function Page({ params }: PageProps) {
     fetchData();
     return () => { isMounted = false; }; // Cleanup function
   }, [joinedPath]);
+
+  // Helper function to find navigation node name by href
+  const findNodeNameByHref = useCallback((nodes: NavigationNode[], targetHref: string): string | undefined => {
+    for (const node of nodes) {
+      if (node.type === 'link' && node.href === targetHref) {
+        return node.name;
+      }
+      if (node.children) {
+        const foundName = findNodeNameByHref(node.children, targetHref);
+        if (foundName) return foundName;
+      }
+    }
+    return undefined;
+  }, []);
+
+  // Determine the current navigation name
+  let tempHref = `/docs/${joinedPath || ''}`.replace(/\/index$/, '') || '/docs'; // Construct base href
+  // Remove trailing slash unless it's the only character (which it won't be here)
+  if (tempHref.endsWith('/') && tempHref.length > 1) {
+    tempHref = tempHref.slice(0, -1);
+  }
+  const currentPageHref = tempHref; // Final href without trailing slash
+
+  const currentNavName = useMemo(() => {
+      if (isNavLoading || !navigation || navigation.length === 0) {
+          return \"\";
+      }
+      const foundName = findNodeNameByHref(navigation, currentPageHref);
+      return foundName || \"\";
+  }, [navigation, isNavLoading, currentPageHref, findNodeNameByHref]);
 
   // Parse markdown for TOC whenever it changes
   useEffect(() => {
@@ -168,6 +200,23 @@ export default function Page({ params }: PageProps) {
   return (
     <>
       <article className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
+        {isEditing && (
+          <div className="mb-4">
+            <label htmlFor="pageTitleInput" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Sidebar Navigation Name:
+            </label>
+            <input
+              type="text"
+              id="pageTitleInput"
+              value={currentNavName}
+              onChange={(e) => updateNavigationNodeName(currentPageHref, e.target.value)}
+              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+              placeholder="Enter sidebar name..."
+              disabled={isNavLoading}
+            />
+            {navError && <p className="text-red-500 text-xs mt-1">Error loading navigation: {navError}</p>}
+          </div>
+        )}
         <InlineMdxEditor
           key={joinedPath}
           markdown={markdown}
