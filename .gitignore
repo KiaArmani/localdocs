@@ -32,5 +32,4 @@ yarn-error.log*
 # content collections cache
 .content-collections
 
-# User uploaded images
-# public/img/uploads/
+.cursor
