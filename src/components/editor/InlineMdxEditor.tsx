@@ -127,16 +127,40 @@ interface InlineMdxEditorProps {
   onChange: (markdown: string) => void;
 }
 
-// Placeholder image upload handler
-async function imageUploadHandler(image: File) {
-  // Simulate upload with a delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  // Return a placeholder URL (e.g., a data URL or a generic path)
-  // In a real app, you would upload the File to a server or CDN
-  // and return the actual URL.
-  console.log(`(Placeholder) Uploaded image: ${image.name}`);
-  // For testing, let's return a simple path. We'll need to manually place an image there or adjust later.
-  return '/img/placeholder.jpg'
+// Updated image upload handler to use the API endpoint
+async function imageUploadHandler(image: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('image', image);
+
+  try {
+    const response = await fetch('/api/docs/upload-image', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorResult = await response.json().catch(() => ({ message: 'Upload failed with status: ' + response.status }));
+      throw new Error(errorResult.message || 'Image upload failed');
+    }
+
+    const result = await response.json();
+
+    if (!result.success || !result.url) {
+       throw new Error('API did not return a valid URL');
+    }
+
+    console.log(`Image uploaded via API: ${result.url}`);
+    return result.url; // Return the URL from the API
+
+  } catch (error: any) {
+    console.error("Error uploading image:", error);
+    // Handle error appropriately - maybe show a notification to the user
+    // For now, we'll throw to prevent the editor from inserting a broken link
+    // Or return a default placeholder image on failure?
+    // Let's throw for now, so the user knows it failed.
+    alert(`Image upload failed: ${error.message}`); // Simple alert for now
+    throw error; // Re-throw to signal failure to the imagePlugin
+  }
 }
 
 // // Toolbar component - Requires components and editorRef (allowing null) // <-- REMOVED
