@@ -1,7 +1,7 @@
 import Cards from '@/components/cards'
 import { Toc } from '@/components/navigation/toc'
 import { InlineMdxEditor } from '@/components/editor/InlineMdxEditor'
-import { getRawDocBySlug } from 'content-collections'
+import { getRawDocBySlug } from '@/lib/docs'
 import { mdxComponents } from '@prose-ui/next'
 import { allPages } from 'content-collections'
 import { Metadata } from 'next'
@@ -60,11 +60,11 @@ export default async function Page({ params }: { params: Params }) {
   return (
     <>
       <article className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
-        <InlineMdxEditor markdown={rawDoc.content} />
+        <InlineMdxEditor markdown={rawDoc.content} slug={pagePathArray} />
       </article>
 
       <div className="sticky top-[var(--topnav-height)] hidden h-[calc(100vh-var(--topnav-height))] w-[var(--toc-width)] shrink-0 flex-col pt-[var(--article-padding-t)] lg:flex">
-        <Toc sections={pageMeta.toc} />
+        <Toc sections={pageMeta?.toc ?? []} />
       </div>
     </>
   )
