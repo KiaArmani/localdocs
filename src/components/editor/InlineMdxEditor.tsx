@@ -47,9 +47,9 @@ import {
   Separator,
   UndoRedo,
   tablePlugin,
-  frontmatterPlugin,
   codeMirrorPlugin,
-  InsertFrontmatter,
+  // frontmatterPlugin, // <-- REMOVED
+  // InsertFrontmatter, // <-- REMOVED
 } from '@mdxeditor/editor';
 
 // Import default CSS
@@ -167,9 +167,6 @@ export function InlineMdxEditor({
   const [frontmatter, setFrontmatter] = useState(initialFrontmatter);
   const editorRef = React.useRef<MDXEditorMethods | null>(null);
 
-  // Log the initial frontmatter received by the component
-  console.log('[InlineMdxEditor] Received initialFrontmatter:', initialFrontmatter);
-
   // Reset internal frontmatter state on prop change
   useEffect(() => {
     setFrontmatter(initialFrontmatter);
@@ -194,7 +191,6 @@ export function InlineMdxEditor({
           jsxPlugin({
             jsxComponentDescriptors: defaultJsxComponents,
           }),
-          frontmatterPlugin(),
           tablePlugin(),
           codeMirrorPlugin({
             codeBlockLanguages: { tsx: 'TypeScript', css: 'CSS', js: 'JavaScript', cs: 'C#', cpp: 'C++' }
@@ -205,8 +201,6 @@ export function InlineMdxEditor({
               // Use the directly imported toolbar components
               <>
                 <UndoRedo />
-                <Separator />
-                <InsertFrontmatter />
                 <Separator />
                 <BoldItalicUnderlineToggles />
                 <Separator />
