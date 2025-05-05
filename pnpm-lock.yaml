@@ -32,6 +32,9 @@ importers:
       framer-motion:
         specifier: ^12.0.0-alpha.1
         version: 12.0.0-alpha.2(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      gray-matter:
+        specifier: ^4.0.3
+        version: 4.0.3
       lucide-react:
         specifier: ^0.468.0
         version: 0.468.0(react@19.0.0)
