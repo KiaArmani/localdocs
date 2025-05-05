@@ -46,6 +46,7 @@ import {
   ListsToggle,
   Separator,
   UndoRedo,
+  tablePlugin,
 } from '@mdxeditor/editor';
 
 // Import default CSS
@@ -187,6 +188,7 @@ export function InlineMdxEditor({
           jsxPlugin({
             jsxComponentDescriptors: defaultJsxComponents,
           }),
+          tablePlugin(),
           // Toolbar - configured to only show when isEditing is true
           toolbarPlugin({
             toolbarContents: isEditing ? () => (
