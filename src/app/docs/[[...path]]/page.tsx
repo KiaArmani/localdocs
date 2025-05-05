@@ -98,10 +98,17 @@ export default function Page({ params }: PageProps) {
     while ((match = headingRegex.exec(markdown)) !== null) {
       const level = match[1].length;
       const rawText = match[2].trim();
-      // Decode space entities AND hash entity
-      const text = rawText.replace(/&#x20;/g, ' ').replace(/&#35;/g, '#');
-      const id = text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'section';
-      newTocSections.push({ depth: level, title: text, id });
+      let decodedText = rawText;
+      try {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = rawText;
+        decodedText = textarea.value;
+      } catch (e) {
+        // console.error("[TOC Decode] Error decoding HTML entities:", e);
+      }
+      const finalText = decodedText.replace(/\\([#*_`[\]()])/g, '$1');
+      const id = finalText.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'section';
+      newTocSections.push({ depth: level, title: finalText, id });
     }
     setTocSections(newTocSections);
   }, [markdown]);
