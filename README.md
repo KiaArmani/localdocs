@@ -2,18 +2,22 @@
   <img alt="Prose UI social image" src="https://repository-images.githubusercontent.com/897893154/12074360-f0b7-47f3-b1ec-10ef71fdbf0c" />
 </a>
 
-## Prose UI Docs Starter
+## Prose UI Docs Starter with Inline Editing
 
-This is a documentation starter template with [Next.js](https://nextjs.org) and [Prose UI](https://prose-ui.com).
+This is a documentation starter template based on [Prose UI](https://prose-ui.com) and [Next.js](https://nextjs.org), enhanced with **inline MDX editing capabilities** for local development.
 
-MDX content for this template can be visually edited using [Dhub's WYSIWYG editor](https://dhub.dev).
-
-[Preview template](https://prose-ui-docs-starter.vercel.app)
+[Preview original template](https://prose-ui-docs-starter.vercel.app)
 
 ## Tech stack
 
 [Next.js 15](https://nextjs.org)\
-The backbone of the site. Pre-renders pages at build time for fast production performance.
+The backbone of the site, using the App Router.
+
+[React 19](https://react.dev)\
+Powers the user interface.
+
+[@mdxeditor/editor](https://mdxeditor.dev)\
+The core WYSIWYG Markdown editor component.
 
 [Prose UI](https://prose-ui.com)\
 Provides components and styles for building clean, MDX-powered documentation.
@@ -22,47 +26,50 @@ Provides components and styles for building clean, MDX-powered documentation.
 Facilitates flexible and efficient styling.
 
 [Shadcn UI](https://ui.shadcn.com)\
-Includes familiar, shadcn-inspired components.
+Provides accessible UI components (Dialog, Button, Input, etc.).
 
 [Content Collections](https://www.content-collections.dev)\
-Renders MDX files with `mdx-bundler` and helps manage frontmatter.
+Processes MDX files and frontmatter during the build.
+
+[gray-matter](https://github.com/jonschlinkert/gray-matter)\
+Used for parsing and updating frontmatter in MDX files.
 
 [MDX v3](https://mdxjs.com)\
 Combines Markdown and JSX for interactive, component-based content.
-
-[Radix](https://mdxjs.com)\
-Provides accessible components used for key elements in this template.
 
 ---
 
 ## Key features
 
-**WYSIWYG editor**\
-Edit your Prose UI MDX files with [Dhub's](https://dhub.dev) WYSIWYG editor.
+**Inline WYSIWYG Editor (Development Mode Only)**\
+- Toggle between View and Edit modes.
+- Edit MDX content and frontmatter directly in the browser using `@mdxeditor/editor`.
+- Edit the corresponding navigation entry name (`navigation.json`).
+- Save content changes back to the local filesystem via API routes.
+- Create new documentation pages and automatically update navigation.
+- Upload images directly into content (saved to `public/img/uploads/`).
+- *Note: All editing features are disabled in production builds.*
 
 **Dark mode**\
-Light and dark modes powered by [next/themes](https://github.com/pacocoursey/next-themes).
+Light and dark modes powered by [next-themes](https://github.com/pacocoursey/next-themes).
 
 **Content folder**\
-Content (MDX files) is separated into a dedicated content folder, making it much easier to manage than scattered `page.mdx` files.
+Content (MDX files and `navigation.json`) lives in the `content/docs/` folder.
 
-**Table of contents**\
-A TOC component on the right helps navigate page content effortlessly.
+**Live Table of Contents Sync**\
+A TOC component automatically updates as headings are edited in the content.
 
 **Code highlighting**\
 [Shiki](https://shiki.style/)-powered server-side code highlighting (via Prose UI).
 
 **Hierarchical sidenav**\
-Organize your navigation into categories, folders, and files.
+Organize your navigation into categories, folders, and files via `navigation.json`.
 
 **Customizable theme**\
 Customize the look and feel using pre-defined [CSS variables](https://prose-ui.com/docs/styling).
 
-**SEO-friendly**\
-Pre-generated pages ensure fast performance and allow search engines to easily index fully-rendered content.
-
-**Blazing fast**\
-Next.js performance optimizations make the site extremely fast with virtually instant page navigation.
+**Fast Performance**\
+Built with Next.js for optimized performance.
 
 **Search**&#x20;\
 Coming soon
@@ -73,17 +80,18 @@ Coming soon
 # Get started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+# Install dependencies
+pnpm install
+
+# Run the development server
 pnpm dev
-# or
-bun dev
 ```
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result. Use the toggle in the top navigation to switch to Edit Mode.
 
 ## Deploy on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+*Note: Production deployments will automatically disable all editing features.*
 
 Check out [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
