@@ -207,7 +207,12 @@ export function InlineMdxEditor({
           markdownShortcutPlugin(),
           codeBlockPlugin({ defaultCodeBlockLanguage: 'tsx' }),
           toolbarPlugin({
-            toolbarContents: isEditing ? SimpleToolbar : undefined
+            toolbarContents: isEditing ? (components) => (
+              <SimpleToolbar
+                components={components}
+                editorRef={editorRef}
+              />
+            ) : () => null
           }),
           jsxPlugin({
             jsxComponentDescriptors: defaultJsxComponents,
