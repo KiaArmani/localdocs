@@ -30,9 +30,11 @@ export async function GET(
   request: Request,
   { params }: { params: { path: string[] } }
 ) {
-  const slug = params.path || []; // Get slug from route parameters
+  // Explicitly get slug from params here
+  const slug = params.path || [];
 
   try {
+    // Use the already defined slug variable
     const doc = await getRawDocBySlug(slug);
 
     if (!doc) {

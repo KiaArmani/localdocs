@@ -126,7 +126,7 @@ export function InlineMdxEditor({ markdown: initialMarkdown, slug, isEditing }: 
           codeBlockPlugin({ defaultCodeBlockLanguage: 'tsx' }),
           // Pass the received components correctly to SimpleToolbar
           toolbarPlugin({
-            toolbarContents: isEditing ? (components) => <SimpleToolbar components={components} /> : () => null
+            toolbarContents: isEditing ? () => <SimpleToolbar /> : () => null
           }),
           jsxPlugin({
             jsxComponentDescriptors: defaultJsxComponents,

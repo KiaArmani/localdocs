@@ -65,7 +65,7 @@ export default function Page({ params }: PageProps) {
     };
 
     fetchData();
-  }, [pagePathArray]);
+  }, [pagePathArray.join('/')]);
 
   if (loading) {
     return (
