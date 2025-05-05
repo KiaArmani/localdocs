@@ -94,6 +94,7 @@ export default function Page({ params }: PageProps) {
         <InlineMdxEditor
           key={pagePathArray.join('/')}
           markdown={rawDoc.content}
+          frontmatter={rawDoc.data}
           slug={pagePathArray}
           isEditing={isEditing}
         />
