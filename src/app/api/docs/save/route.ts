@@ -3,9 +3,16 @@ import path from 'path';
 import { NextResponse } from 'next/server';
 import matter from 'gray-matter'; // To potentially preserve existing frontmatter
 
-export async function POST(request: Request) {
+const contentDocsPath = path.join(process.cwd(), 'content', 'docs');
+
+export async function POST(req: Request) {
+  // Disallow saving in production
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ message: 'Operation not allowed in production.' }, { status: 403 });
+  }
+
   try {
-    const { slug, content, frontmatter } = await request.json();
+    const { slug, content, frontmatter } = await req.json();
 
     // Adjust validation: Allow empty slug array (represents root/index)
     if (!slug || !Array.isArray(slug) || typeof content !== 'string') { // Removed slug.length === 0 check

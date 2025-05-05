@@ -5,6 +5,11 @@ import { NextResponse } from 'next/server';
 const navigationFilePath = path.join(process.cwd(), 'content', 'docs', 'navigation.json');
 
 export async function POST(request: Request) {
+  // Disallow saving in production
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ message: 'Operation not allowed in production.' }, { status: 403 });
+  }
+
   try {
     const navigationData = await request.json();
 
