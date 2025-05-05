@@ -259,8 +259,8 @@ export function InlineMdxEditor({
           }),
         ]}
         className="dark:prose-invert prose-headings:font-display prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl font-sans prose-p:font-sans"
-        // Add specific styles for images within the content editable area
-        contentEditableClassName="prose dark:prose-invert max-w-none [&_img]:outline [&_img]:outline-1 [&_img]:outline-blue-500/50 [&_img]:cursor-pointer"
+        // Make image outline opaque and thicker for easier selection
+        contentEditableClassName="prose dark:prose-invert max-w-none [&_img]:outline [&_img]:outline-2 [&_img]:outline-blue-500 [&_img]:cursor-pointer"
       />
     </div>
   );
