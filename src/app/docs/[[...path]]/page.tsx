@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useEffect, useState } from 'react';
 import Cards from '@/components/cards'
 import { Toc } from '@/components/navigation/toc'
 import { InlineMdxEditor } from '@/components/editor/InlineMdxEditor'
@@ -7,10 +8,9 @@ import { mdxComponents } from '@prose-ui/next'
 import { allPages } from 'content-collections'
 import pathModule from 'path'
 import { useEditMode } from '@/contexts/EditModeContext'
-import React, { useEffect, useState, useRef } from 'react'
 
 type PageProps = {
-  params: { path: string[] }
+  params: Promise<{ path: string[] }>;
 }
 
 export default function Page({ params }: PageProps) {
@@ -19,10 +19,6 @@ export default function Page({ params }: PageProps) {
   const joinedPath = pagePathArray.join('/');
 
   const { isEditing } = useEditMode();
-
-  const renderCount = useRef(0);
-  renderCount.current += 1;
-  console.log(`Page Render #${renderCount.current}: Path Array =`, pagePathArray, `Joined Path = "${joinedPath}"`);
 
   const [rawDoc, setRawDoc] = useState<{ content: string; data: Record<string, any> } | null>(null);
   const [pageMeta, setPageMeta] = useState<any>(null);
@@ -33,7 +29,7 @@ export default function Page({ params }: PageProps) {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
-      const slugPath = pagePathArray.join('/') || 'index';
+      const slugPath = joinedPath || 'index';
       const apiPath = `/api/docs/content/${slugPath}`;
 
       try {

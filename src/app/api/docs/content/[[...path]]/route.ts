@@ -28,13 +28,14 @@ async function getRawDocBySlug(slug: string[]): Promise<{ content: string; data:
 
 export async function GET(
   request: Request,
-  { params }: { params: { path: string[] } }
+  context: { params: { path: string[] } }
 ) {
-  // Explicitly get slug from params here
-  const slug = params.path || [];
-
   try {
-    // Use the already defined slug variable
+    // Await the params object to resolve it
+    const resolvedParams = await context.params;
+    // Access path from the resolved object
+    const slug = resolvedParams.path || [];
+
     const doc = await getRawDocBySlug(slug);
 
     if (!doc) {
