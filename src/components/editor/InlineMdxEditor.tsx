@@ -23,6 +23,13 @@ import {
   quotePlugin as quotePluginToolbar,
   thematicBreakPlugin as thematicBreakPluginToolbar,
   MDXEditorMethods, // Ensure MDXEditorMethods is imported
+  // Import slash command plugin
+  // slashCommandPlugin,
+  // Import necessary types for headings
+  // type HeadingNode,
+  // $isHeadingNode,
+  // $getRoot,
+  type ToolbarComponents, // Re-add ToolbarComponents type
 } from '@mdxeditor/editor';
 
 // Import default CSS
@@ -34,6 +41,12 @@ import { useSaveContext, type SaveState } from '@/contexts/SaveContext';
 // Assuming components like Callout and Cards are used
 // We might need to import the actual components if descriptors need specifics
 // import { Callout, Cards } from '@/components/???'; // Adjust path if needed
+
+// Import Lexical functions directly
+import { $getRoot, LexicalNode, EditorState } from 'lexical';
+
+// Import $isHeadingNode and HeadingNode from @lexical/rich-text
+import { $isHeadingNode, HeadingNode } from '@lexical/rich-text';
 
 // Update GenericJsxEditor to accept JsxEditorProps
 const GenericJsxEditor = (props: JsxEditorProps) => {
@@ -97,11 +110,19 @@ const defaultJsxComponents: JsxComponentDescriptor[] = [
   },
 ];
 
+// Type for TOC entries
+export interface TocEntry {
+  text: string;
+  id: string;
+  level: number;
+}
+
 interface InlineMdxEditorProps {
   markdown: string;
   frontmatter: Record<string, any>;
   slug: string[];
   isEditing: boolean;
+  onHeadingsChange?: (headings: TocEntry[]) => void; // Callback prop
 }
 
 // Toolbar component - Update editorRef type to allow null
@@ -142,7 +163,8 @@ export function InlineMdxEditor({
   markdown: initialMarkdown,
   frontmatter: initialFrontmatter,
   slug,
-  isEditing
+  isEditing,
+  onHeadingsChange, // Destructure callback
 }: InlineMdxEditorProps) {
   const [markdown, setMarkdown] = useState(initialMarkdown);
   const [frontmatter, setFrontmatter] = useState(initialFrontmatter);
@@ -190,6 +212,58 @@ export function InlineMdxEditor({
     // setSaveStatus('idle'); // Maybe not - keep status across navigations?
   }, [initialMarkdown, initialFrontmatter]);
 
+  // Effect to listen for editor updates and extract headings
+  useEffect(() => {
+    const editor = editorRef.current;
+    if (!editor || !onHeadingsChange) { return; }
+
+    const extractHeadingsFromState = (editorState: EditorState) => {
+      const headings: TocEntry[] = [];
+      editorState.read(() => {
+        const root = $getRoot(); // Correct usage
+        root.getChildren().forEach(node => {
+          if ($isHeadingNode(node)) { // Correct usage
+            headings.push({
+              level: parseInt((node as HeadingNode).getTag().substring(1), 10), // Correct usage
+              text: node.getTextContent(),
+              id: node.getTextContent().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'section'
+            });
+          }
+          // Add basic recursive check for headings inside other container nodes (e.g., list items, blockquotes)
+          // This is still simplified and might miss some edge cases.
+          else if (node.getChildren) {
+            node.getChildren().forEach(child => {
+              if ($isHeadingNode(child)) {
+                headings.push({
+                  level: parseInt((child as HeadingNode).getTag().substring(1), 10),
+                  text: child.getTextContent(),
+                  id: child.getTextContent().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'section'
+                });
+              }
+            });
+          }
+        });
+      });
+      onHeadingsChange(headings);
+    };
+
+    if (typeof editor.registerUpdateListener === 'function') {
+      const unregister = editor.registerUpdateListener(({ editorState }) => {
+        extractHeadingsFromState(editorState);
+      });
+
+      const editorState = editor.getEditorState();
+      if (editorState) {
+         extractHeadingsFromState(editorState);
+      }
+
+      return () => { unregister(); };
+    } else {
+      console.warn("registerUpdateListener is not available on the editor ref.");
+    }
+
+  }, [editorRef, onHeadingsChange]);
+
   return (
     <div className="prose dark:prose-invert max-w-none w-full">
       <MDXEditor
@@ -207,16 +281,15 @@ export function InlineMdxEditor({
           markdownShortcutPlugin(),
           codeBlockPlugin({ defaultCodeBlockLanguage: 'tsx' }),
           toolbarPlugin({
-            toolbarContents: isEditing ? (components) => (
-              <SimpleToolbar
-                components={components}
-                editorRef={editorRef}
-              />
+            toolbarContents: isEditing ? (components: ToolbarComponents) => (
+              <SimpleToolbar components={components} editorRef={editorRef} />
             ) : () => null
           }),
           jsxPlugin({
             jsxComponentDescriptors: defaultJsxComponents,
-          })
+          }),
+          // Temporarily remove slashCommandPlugin until correct import is found
+          // slashCommandPlugin({})
         ]}
         className="dark:prose-invert prose-headings:font-display prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl font-sans prose-p:font-sans"
         contentEditableClassName="prose dark:prose-invert max-w-none"

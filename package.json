@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@icons-pack/react-simple-icons": "^10.2.0",
+    "@lexical/rich-text": "^0.31.0",
     "@mdxeditor/editor": "^3.32.1",
     "@radix-ui/colors": "^3.0.0",
     "@radix-ui/react-dialog": "^1.1.2",
