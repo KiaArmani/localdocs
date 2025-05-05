@@ -10,11 +10,19 @@ import pathModule from 'path'
 import { useEditMode } from '@/contexts/EditModeContext'
 import { useSaveContext } from '@/contexts/SaveContext'
 
-// Define TocEntry here or in a shared types file
+// Define TocEntry used internally for parsing
 interface TocEntry {
   text: string;
   id: string;
   level: number;
+}
+
+// Define the Section type expected by the actual Toc component
+// (Ideally this would be imported from where Toc defines it)
+interface Section {
+  title: string;
+  id: string;
+  depth: number; // Changed from level
 }
 
 type PageProps = {
@@ -35,7 +43,7 @@ export default function Page({ params }: PageProps) {
   // Lifted markdown state
   const [markdown, setMarkdown] = useState<string>('');
   const [frontmatter, setFrontmatter] = useState<Record<string, any>>({});
-  const [tocEntries, setTocEntries] = useState<TocEntry[]>([]);
+  const [tocSections, setTocSections] = useState<Section[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -45,7 +53,7 @@ export default function Page({ params }: PageProps) {
     const fetchData = async () => {
       setLoading(true);
       setError(null);
-      setTocEntries([]);
+      setTocSections([]);
       const slugPath = joinedPath || 'index';
       const apiPath = `/api/docs/content/${slugPath}`;
 
@@ -70,7 +78,7 @@ export default function Page({ params }: PageProps) {
           setError(err.message || "Error loading document content.");
           setMarkdown(''); // Clear markdown on error
           setFrontmatter({});
-          setTocEntries([]);
+          setTocSections([]);
         }
       } finally {
         if (isMounted) {
@@ -84,18 +92,18 @@ export default function Page({ params }: PageProps) {
 
   // Parse markdown for TOC whenever it changes
   useEffect(() => {
-    const newTocEntries: TocEntry[] = [];
-    // Reset match index for global regex
+    const newTocSections: Section[] = [];
     headingRegex.lastIndex = 0;
     let match;
     while ((match = headingRegex.exec(markdown)) !== null) {
-      const level = match[1].length; // Number of # signs
-      const text = match[2].trim();
+      const level = match[1].length;
+      const rawText = match[2].trim();
+      const text = rawText.replace(/&#x20;/g, ' ');
       const id = text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'section';
-      newTocEntries.push({ level, text, id });
+      newTocSections.push({ depth: level, title: text, id });
     }
-    setTocEntries(newTocEntries);
-  }, [markdown]); // Re-run whenever markdown state changes
+    setTocSections(newTocSections);
+  }, [markdown]);
 
   // Handler for editor changes
   const handleMarkdownChange = useCallback((newMarkdown: string) => {
@@ -163,7 +171,7 @@ export default function Page({ params }: PageProps) {
       </article>
 
       <div className="sticky top-[var(--topnav-height)] hidden h-[calc(100vh-var(--topnav-height))] w-[var(--toc-width)] shrink-0 flex-col pt-[var(--article-padding-t)] lg:flex">
-        <Toc sections={tocEntries} />
+        <Toc sections={tocSections} />
       </div>
     </>
   )
