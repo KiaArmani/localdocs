@@ -48,6 +48,8 @@ import {
   UndoRedo,
   tablePlugin,
   codeMirrorPlugin,
+  // Import the imagePlugin
+  imagePlugin,
   // frontmatterPlugin, // <-- REMOVED
   // InsertFrontmatter, // <-- REMOVED
 } from '@mdxeditor/editor';
@@ -125,6 +127,18 @@ interface InlineMdxEditorProps {
   onChange: (markdown: string) => void;
 }
 
+// Placeholder image upload handler
+async function imageUploadHandler(image: File) {
+  // Simulate upload with a delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  // Return a placeholder URL (e.g., a data URL or a generic path)
+  // In a real app, you would upload the File to a server or CDN
+  // and return the actual URL.
+  console.log(`(Placeholder) Uploaded image: ${image.name}`);
+  // For testing, let's return a simple path. We'll need to manually place an image there or adjust later.
+  return '/img/placeholder.jpg'
+}
+
 // // Toolbar component - Requires components and editorRef (allowing null) // <-- REMOVED
 // const SimpleToolbar = ({
 //   components,
@@ -195,6 +209,8 @@ export function InlineMdxEditor({
           codeMirrorPlugin({
             codeBlockLanguages: { tsx: 'TypeScript', css: 'CSS', js: 'JavaScript', cs: 'C#', cpp: 'C++' }
           }),
+          // Add the imagePlugin with the placeholder handler
+          imagePlugin({ imageUploadHandler }),
           // Toolbar - configured to only show when isEditing is true
           toolbarPlugin({
             toolbarContents: isEditing ? () => (

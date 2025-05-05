@@ -17,6 +17,11 @@
         "type": "link",
         "name": "Basics",
         "href": "/docs/basics"
+      },
+      {
+        "type": "link",
+        "name": "Motion",
+        "href": "/docs/introduction/motion"
       }
     ]
   },
@@ -100,6 +105,11 @@
             "type": "link",
             "name": "Sombrero",
             "href": "/docs/deep-space/galaxies/sombrero"
+          },
+          {
+            "type": "link",
+            "name": "Salad",
+            "href": "/docs/deep-space/galaxies/salad"
           }
         ]
       },
