@@ -3,15 +3,26 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import Cards from '@/components/cards'
 import { Toc } from '@/components/navigation/toc'
-import { InlineMdxEditor, type TocEntry } from '@/components/editor/InlineMdxEditor'
+import { InlineMdxEditor } from '@/components/editor/InlineMdxEditor'
 import { mdxComponents } from '@prose-ui/next'
 import { allPages } from 'content-collections'
 import pathModule from 'path'
 import { useEditMode } from '@/contexts/EditModeContext'
+import { useSaveContext } from '@/contexts/SaveContext'
+
+// Define TocEntry here or in a shared types file
+interface TocEntry {
+  text: string;
+  id: string;
+  level: number;
+}
 
 type PageProps = {
   params: Promise<{ path: string[] }>;
 }
+
+// Simple regex to find markdown headings
+const headingRegex = /^(#{1,6})\s+(.*)/gm;
 
 export default function Page({ params }: PageProps) {
   const resolvedParams = React.use(params);
@@ -19,13 +30,18 @@ export default function Page({ params }: PageProps) {
   const joinedPath = pagePathArray.join('/');
 
   const { isEditing } = useEditMode();
+  const { registerSaveHandler, setSaveStatus } = useSaveContext();
 
-  const [rawDoc, setRawDoc] = useState<{ content: string; data: Record<string, any> } | null>(null);
+  // Lifted markdown state
+  const [markdown, setMarkdown] = useState<string>('');
+  const [frontmatter, setFrontmatter] = useState<Record<string, any>>({});
   const [tocEntries, setTocEntries] = useState<TocEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch initial data
   useEffect(() => {
+    let isMounted = true; // Prevent state update on unmounted component
     const fetchData = async () => {
       setLoading(true);
       setError(null);
@@ -35,7 +51,6 @@ export default function Page({ params }: PageProps) {
 
       try {
         const response = await fetch(apiPath);
-
         if (!response.ok) {
           if (response.status === 404) {
             throw new Error('Document not found.');
@@ -44,33 +59,79 @@ export default function Page({ params }: PageProps) {
           }
         }
         const fetchedRawDoc = await response.json();
-        setRawDoc(fetchedRawDoc);
-
-        const path = pagePathArray.length > 0 ? `/${pagePathArray.join('/')}` : '/'
-        let fetchedPageMeta = allPages.find((page) => page.path === path);
-
-        if (fetchedPageMeta && fetchedPageMeta.toc) {
-          // Use build-time TOC initially if available
-          // Note: Ensure the structure matches TocEntry if using this
-          // setTocEntries(fetchedPageMeta.toc);
+        if (isMounted) {
+          setMarkdown(fetchedRawDoc.content);
+          setFrontmatter(fetchedRawDoc.data || {});
+          // Initial TOC parsing happens in the other useEffect
         }
-
       } catch (err: any) {
-        console.error("Failed to load doc data:", err);
-        setError(err.message || "Error loading document content.");
-        setRawDoc(null);
-        setTocEntries([]);
+        if (isMounted) {
+          console.error("Failed to load doc data:", err);
+          setError(err.message || "Error loading document content.");
+          setMarkdown(''); // Clear markdown on error
+          setFrontmatter({});
+          setTocEntries([]);
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
-
     fetchData();
+    return () => { isMounted = false; }; // Cleanup function
   }, [joinedPath]);
 
-  const handleHeadingsChange = useCallback((headings: TocEntry[]) => {
-    setTocEntries(headings);
+  // Parse markdown for TOC whenever it changes
+  useEffect(() => {
+    const newTocEntries: TocEntry[] = [];
+    // Reset match index for global regex
+    headingRegex.lastIndex = 0;
+    let match;
+    while ((match = headingRegex.exec(markdown)) !== null) {
+      const level = match[1].length; // Number of # signs
+      const text = match[2].trim();
+      const id = text.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'section';
+      newTocEntries.push({ level, text, id });
+    }
+    setTocEntries(newTocEntries);
+  }, [markdown]); // Re-run whenever markdown state changes
+
+  // Handler for editor changes
+  const handleMarkdownChange = useCallback((newMarkdown: string) => {
+    setMarkdown(newMarkdown);
   }, []);
+
+  // Actual Save Logic - Registered with context
+  const executeSave = useCallback(async () => {
+    setSaveStatus('saving');
+    try {
+      const response = await fetch('/api/docs/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          slug: pagePathArray, // Use slug from page params
+          content: markdown,     // Use current markdown state
+          frontmatter: frontmatter, // Use current frontmatter state
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Failed to save document');
+      }
+      setSaveStatus('saved', 'Document saved!');
+    } catch (error: any) {
+      console.error("Save error in Page:", error);
+      setSaveStatus('error', error.message || 'An unexpected error occurred.');
+    }
+  }, [markdown, frontmatter, pagePathArray, setSaveStatus]); // Dependencies needed for the save logic
+
+  // Register the save handler on mount/when logic changes
+  useEffect(() => {
+    registerSaveHandler(executeSave);
+    // Optional cleanup if needed
+    // return () => registerSaveHandler(async () => {});
+  }, [registerSaveHandler, executeSave]);
 
   if (loading) {
     return (
@@ -80,7 +141,7 @@ export default function Page({ params }: PageProps) {
     );
   }
 
-  if (error || !rawDoc) {
+  if (error || !markdown) {
     return (
       <div className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
         <p>{error || "Document not found."}</p>
@@ -93,11 +154,11 @@ export default function Page({ params }: PageProps) {
       <article className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
         <InlineMdxEditor
           key={joinedPath}
-          markdown={rawDoc.content}
-          frontmatter={rawDoc.data}
+          markdown={markdown}
+          onChange={handleMarkdownChange}
+          frontmatter={frontmatter}
           slug={pagePathArray}
           isEditing={isEditing}
-          onHeadingsChange={handleHeadingsChange}
         />
       </article>
 
