@@ -88,10 +88,36 @@ pnpm dev
 ```
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result. Use the toggle in the top navigation to switch to Edit Mode.
 
-## Deploy on Vercel
+## Deployment
+
+This project is a standard Next.js application and can be deployed to any hosting provider that supports Node.js.
+
+**Important:** The inline editing features (editor UI, save/create/upload API routes) are automatically disabled when the application is built for production (`NODE_ENV=production`). The deployed version will function as a read-only documentation site.
+
+### Build
+
+Run the following command to build the application for production:
+
+```bash
+pnpm build
+```
+
+This will generate an optimized build in the `.next` directory.
+
+### Running the Production Server
+
+After building, you can start the production server:
+
+```bash
+pnpm start
+```
+
+This requires Node.js to be installed on your deployment server.
+
+### Deploying on Vercel
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-*Note: Production deployments will automatically disable all editing features.*
+Vercel will automatically detect Next.js, run the build command (`pnpm build`), and deploy the optimized output.
 
-Check out [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details on deploying to Vercel and other platforms.
