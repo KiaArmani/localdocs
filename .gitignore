@@ -33,4 +33,4 @@ yarn-error.log*
 .content-collections
 
 # User uploaded images
-public/img/uploads/
+# public/img/uploads/
