@@ -23,13 +23,29 @@ import {
   quotePlugin as quotePluginToolbar,
   thematicBreakPlugin as thematicBreakPluginToolbar,
   MDXEditorMethods, // Ensure MDXEditorMethods is imported
-  // Import slash command plugin
+  // // Import slash command plugin // <-- REMOVED
   // slashCommandPlugin,
+  // // Import actions for slash commands // <-- REMOVED
+  // InsertCodeBlock,
+  // InsertImage,
+  // InsertTable,
+  // InsertThematicBreak,
   // Import necessary types for headings
   // type HeadingNode,
   // $isHeadingNode,
   // $getRoot,
-  type ToolbarComponents, // Re-add ToolbarComponents type
+  // type ToolbarComponents, // Re-add ToolbarComponents type // <-- REMOVED (and was likely incorrect anyway)
+  // Toolbar components
+  BlockTypeSelect,
+  BoldItalicUnderlineToggles,
+  CreateLink,
+  InsertCodeBlock,
+  InsertImage,
+  InsertTable,
+  InsertThematicBreak,
+  ListsToggle,
+  Separator,
+  UndoRedo,
 } from '@mdxeditor/editor';
 
 // Import default CSS
@@ -105,36 +121,36 @@ interface InlineMdxEditorProps {
   onChange: (markdown: string) => void;
 }
 
-// Toolbar component - Requires components and editorRef (allowing null)
-const SimpleToolbar = ({
-  components,
-  editorRef,
-}: {
-  components: any; // Use any for now
-  editorRef: React.RefObject<MDXEditorMethods | null>;
-}) => {
-  if (!components) return null;
-  return (
-    <components.ToolbarRoot>
-       {/* Keep standard buttons */}
-       <components.H1 />
-       <components.H2 />
-       <components.H3 />
-       <components.Separator />
-       <components.BulletedList />
-       <components.OrderedList />
-       <components.Separator />
-       <components.Blockquote />
-       <components.ThematicBreak />
-       <components.Separator />
-       <components.CreateLink />
-       <components.CodeBlock />
-       <components.Separator />
-       <components.Undo />
-       <components.Redo />
-    </components.ToolbarRoot>
-  );
-};
+// // Toolbar component - Requires components and editorRef (allowing null) // <-- REMOVED
+// const SimpleToolbar = ({
+//   components,
+//   editorRef,
+// }: {
+//   components: any; // Use any for now
+//   editorRef: React.RefObject<MDXEditorMethods | null>;
+// }) => {
+//   if (!components) return null;
+//   return (
+//     <components.ToolbarRoot>
+//        {/* Keep standard buttons */}
+//        <components.H1 />
+//        <components.H2 />
+//        <components.H3 />
+//        <components.Separator />
+//        <components.BulletedList />
+//        <components.OrderedList />
+//        <components.Separator />
+//        <components.Blockquote />
+//        <components.ThematicBreak />
+//        <components.Separator />
+//        <components.CreateLink />
+//        <components.CodeBlock />
+//        <components.Separator />
+//        <components.Undo />
+//        <components.Redo />
+//     </components.ToolbarRoot>
+//   );
+// };
 
 export function InlineMdxEditor({
   markdown: initialMarkdown,
@@ -168,13 +184,30 @@ export function InlineMdxEditor({
           thematicBreakPlugin(),
           markdownShortcutPlugin(),
           codeBlockPlugin({ defaultCodeBlockLanguage: 'tsx' }),
-          toolbarPlugin({
-            toolbarContents: isEditing ? (components) => (
-              <SimpleToolbar components={components} editorRef={editorRef} />
-            ) : () => null
-          }),
           jsxPlugin({
             jsxComponentDescriptors: defaultJsxComponents,
+          }),
+          // Toolbar - configured to only show when isEditing is true
+          toolbarPlugin({
+            toolbarContents: isEditing ? () => (
+              // Use the directly imported toolbar components
+              <>
+                <UndoRedo />
+                <Separator />
+                <BoldItalicUnderlineToggles />
+                <Separator />
+                <ListsToggle />
+                <Separator />
+                <BlockTypeSelect />
+                <Separator />
+                <CreateLink />
+                <InsertImage />
+                <InsertTable />
+                <InsertThematicBreak/>
+                <Separator />
+                <InsertCodeBlock />
+              </>
+            ) : () => null // Render nothing if not editing
           }),
         ]}
         className="dark:prose-invert prose-headings:font-display prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl font-sans prose-p:font-sans"
