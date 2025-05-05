@@ -70,24 +70,28 @@ interface InlineMdxEditorProps {
   isEditing: boolean;
 }
 
-// Define the toolbar structure directly
-const SimpleToolbar = () => {
+// Revert SimpleToolbar to accept components prop
+// Let TypeScript infer the type of `components`
+const SimpleToolbar = ({ components }: { components: any }) => {
+  if (!components) return null; // Guard against undefined components
+
+  // Access components directly from the passed prop
   return (
-    <toolbarPlugin.Toolbar>
-      <headingsPluginToolbar.toolbarContents.H1 />
-      <headingsPluginToolbar.toolbarContents.H2 />
-      <headingsPluginToolbar.toolbarContents.H3 />
-      <toolbarPlugin.toolbarContents.Separator />
-      <listsPluginToolbar.toolbarContents.BulletedList />
-      <listsPluginToolbar.toolbarContents.OrderedList />
-      <toolbarPlugin.toolbarContents.Separator />
-      <quotePluginToolbar.toolbarContents.Blockquote />
-      <thematicBreakPluginToolbar.toolbarContents.ThematicBreak />
-      <toolbarPlugin.toolbarContents.Separator />
-      <linkPlugin.toolbarContents.CreateLink />
-      <codeBlockPlugin.toolbarContents.CodeBlock />
+    <components.ToolbarRoot>
+      <components.H1 />
+      <components.H2 />
+      <components.H3 />
+      <components.Separator />
+      <components.BulletedList />
+      <components.OrderedList />
+      <components.Separator />
+      <components.Blockquote />
+      <components.ThematicBreak />
+      <components.Separator />
+      <components.CreateLink />
+      <components.CodeBlock />
       {/* Add Save button later */}
-    </toolbarPlugin.Toolbar>
+    </components.ToolbarRoot>
   );
 };
 
@@ -120,9 +124,9 @@ export function InlineMdxEditor({ markdown: initialMarkdown, slug, isEditing }: 
           markdownShortcutPlugin(),
           // Remove sandpackConfig from codeBlockPlugin
           codeBlockPlugin({ defaultCodeBlockLanguage: 'tsx' }),
-          // Pass SimpleToolbar directly to toolbarContents
+          // Pass the received components correctly to SimpleToolbar
           toolbarPlugin({
-            toolbarContents: isEditing ? () => <SimpleToolbar /> : () => null
+            toolbarContents: isEditing ? (components) => <SimpleToolbar components={components} /> : () => null
           }),
           jsxPlugin({
             jsxComponentDescriptors: defaultJsxComponents,
