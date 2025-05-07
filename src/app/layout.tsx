@@ -3,9 +3,7 @@ import localFont from 'next/font/local'
 import './globals.css'
 import { ThemeProvider } from 'next-themes'
 import { TopNav } from '@/components/navigation/topnav'
-import { EditModeProvider } from '@/contexts/EditModeContext'
-import { SaveProvider } from '@/contexts/SaveContext'
-import { NavigationProvider } from "@/contexts/NavigationContext"
+import { DevModeProviders } from '@/contexts/DevModeProviders'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -56,18 +54,14 @@ export default function RootLayout({
     >
       <body className="bg-color-base min-h-screen font-sans antialiased">
         <ThemeProvider attribute="class">
-          <EditModeProvider>
-            <NavigationProvider>
-              <SaveProvider>
-                <div className="flex min-h-screen flex-col">
-                  <TopNav />
-                  <div className="flex flex-1">
-                    {children}
-                  </div>
-                </div>
-              </SaveProvider>
-            </NavigationProvider>
-          </EditModeProvider>
+          <DevModeProviders>
+            <div className="flex min-h-screen flex-col">
+              <TopNav />
+              <div className="flex flex-1">
+                {children}
+              </div>
+            </div>
+          </DevModeProviders>
         </ThemeProvider>
       </body>
     </html>

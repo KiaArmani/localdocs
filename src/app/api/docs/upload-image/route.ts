@@ -1,7 +1,7 @@
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import { NextResponse } from 'next/server';
-import { NextRequest } from 'next/server';
+import type { NextRequest } from 'next/server';
 
 const UPLOAD_DIR = path.join(process.cwd(), 'public', 'img', 'uploads');
 
@@ -22,25 +22,30 @@ async function ensureUploadDirExists() {
 }
 
 export async function POST(request: NextRequest) {
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ success: false, message: 'API only available in development mode.' }, { status: 403 });
+  }
+
   // Ensure the upload directory exists before processing the request
   try {
     await ensureUploadDirExists();
-  } catch (error: any) {
-    return NextResponse.json({ message: error.message || 'Upload directory error.' }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Upload directory error.';
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
 
   try {
     const formData = await request.formData();
-    const file = formData.get('image') as File | null; // Field name expected from frontend
+    const file = formData.get('image') as File | null;
 
     if (!file) {
-      return NextResponse.json({ message: 'No image file provided.' }, { status: 400 });
+      return NextResponse.json({ success: false, message: 'No image file provided.' }, { status: 400 });
     }
 
     // Validate file type (optional but recommended)
     const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     if (!allowedTypes.includes(file.type)) {
-       return NextResponse.json({ message: `Invalid file type: ${file.type}. Only JPG, PNG, GIF, WEBP allowed.` }, { status: 400 });
+       return NextResponse.json({ success: false, message: `Invalid file type: ${file.type}. Only JPG, PNG, GIF, WEBP allowed.` }, { status: 400 });
     }
 
     // Generate a unique filename (e.g., timestamp + original name)
@@ -61,9 +66,9 @@ export async function POST(request: NextRequest) {
     // Return the public URL
     return NextResponse.json({ success: true, url: publicUrl });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("API Error uploading image:", error);
-    const errorMessage = error.message || 'Internal Server Error uploading image.';
-    return NextResponse.json({ message: errorMessage }, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'Internal Server Error uploading image.';
+    return NextResponse.json({ success: false, message: errorMessage }, { status: 500 });
   }
 } 

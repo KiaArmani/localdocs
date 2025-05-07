@@ -1,235 +1,101 @@
-'use client';
+// 'use client'; // Removed: This is now a Server Component
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import Cards from '@/components/cards'
-import { Toc } from '@/components/navigation/toc'
-import { InlineMdxEditor } from '@/components/editor/InlineMdxEditor'
-import { mdxComponents } from '@prose-ui/next'
-import { allPages } from 'content-collections'
-import pathModule from 'path'
-import { useEditMode } from '@/contexts/EditModeContext'
-import { useSaveContext } from '@/contexts/SaveContext'
-import { useNavigation, NavigationNode } from '@/contexts/NavigationContext'
+import React, { Suspense } from 'react'; // React and Suspense for React.lazy
+import { allPages } from 'content-collections'; // For generateStaticParams and fetching data
+import { Toc } from '@/components/navigation/toc';
+import { mdxComponents, Frame, Image } from '@prose-ui/next'; // For static MDX rendering
+import Cards from '@/components/cards'; // Import local Cards component
+import { notFound } from 'next/navigation'; // For handling page not found
+import { MDXRemote } from 'next-mdx-remote/rsc'; // Import MDXRemote
 
-// Define TocEntry used internally for parsing
-interface TocEntry {
-  text: string;
-  id: string;
-  level: number;
-}
+// Dynamically import the editor component for development only
+// Note: React.lazy can only be used in Client Components or parent Server Components that use Suspense.
+// This component (Page) is a Server Component.
+const EditableDocPage = React.lazy(() => import('@/components/editor/EditableDocPage'));
 
-// Define the Section type expected by the actual Toc component
-// (Ideally this would be imported from where Toc defines it)
+// Define the Section type expected by the Toc component (if not imported globally)
 interface Section {
   title: string;
   id: string;
-  depth: number; // Changed from level
+  depth: number;
 }
 
-type PageProps = {
-  params: Promise<{ path: string[] }>;
+// Define a more specific type for the page object coming from allPages
+// This should align with the return type of the transform function in content-collections.ts
+interface ContentPage {
+  _meta: { path: string; [key: string]: unknown }; // Changed any to unknown
+  rawContent: string;
+  content: React.ElementType | string; // Compiled content could be a component or HTML string
+  title: string | null;
+  toc: Section[];
+  path: string;
+  frontmatter?: Record<string, unknown>; // Optional frontmatter
+  [key: string]: unknown; // Changed any to unknown
 }
 
-// Simple regex to find markdown headings
-const headingRegex = /^(#{1,6})\s+(.*)/gm;
-
-export default function Page({ params }: PageProps) {
-  const resolvedParams = React.use(params);
-  const pagePathArray = resolvedParams.path ?? [];
-  const joinedPath = pagePathArray.join('/');
-
-  const { isEditing } = useEditMode();
-  const { registerSaveHandler, setSaveStatus } = useSaveContext();
-  const { navigation, updateNavigationNodeName, isLoading: isNavLoading, error: navError } = useNavigation();
-
-  // Lifted markdown state
-  const [markdown, setMarkdown] = useState<string>('');
-  const [frontmatter, setFrontmatter] = useState<Record<string, any>>({});
-  const [tocSections, setTocSections] = useState<Section[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch initial data
-  useEffect(() => {
-    let isMounted = true; // Prevent state update on unmounted component
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      setTocSections([]);
-      const slugPath = joinedPath || 'index';
-      const apiPath = `/api/docs/content/${slugPath}`;
-
-      try {
-        const response = await fetch(apiPath);
-        if (!response.ok) {
-          if (response.status === 404) {
-            throw new Error('Document not found.');
-          } else {
-            throw new Error(`API error: ${response.statusText}`);
-          }
-        }
-        const fetchedRawDoc = await response.json();
-        if (isMounted) {
-          setMarkdown(fetchedRawDoc.content);
-          setFrontmatter(fetchedRawDoc.data || {});
-          // Initial TOC parsing happens in the other useEffect
-        }
-      } catch (err: any) {
-        if (isMounted) {
-          console.error("Failed to load doc data:", err);
-          setError(err.message || "Error loading document content.");
-          setMarkdown(''); // Clear markdown on error
-          setFrontmatter({});
-          setTocSections([]);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-    fetchData();
-    return () => { isMounted = false; }; // Cleanup function
-  }, [joinedPath]);
-
-  // Helper function to find navigation node name by href
-  const findNodeNameByHref = useCallback((nodes: NavigationNode[], targetHref: string): string | undefined => {
-    for (const node of nodes) {
-      if (node.type === 'link' && node.href === targetHref) {
-        return node.name;
-      }
-      if (node.children) {
-        const foundName = findNodeNameByHref(node.children, targetHref);
-        if (foundName) return foundName;
-      }
+// 1. Implement generateStaticParams
+export async function generateStaticParams() {
+  return allPages.map((page: ContentPage) => { // Added ContentPage type to page
+    const pathSegments = page.path.split('/').filter(Boolean);
+    if (page.path === '/') {
+        return { path: [] };
     }
-    return undefined;
-  }, []);
+    return { path: pathSegments };
+  });
+}
 
-  // Determine the current navigation name
-  let tempHref = `/docs/${joinedPath || ''}`.replace(/\/index$/, '') || '/docs'; // Construct base href
-  // Remove trailing slash unless it's the only character (which it won't be here)
-  if (tempHref.endsWith('/') && tempHref.length > 1) {
-    tempHref = tempHref.slice(0, -1);
+// Combine standard Prose UI components with locally defined ones
+const finalMdxComponents = {
+  ...mdxComponents,
+  Cards,
+  Frame,
+  Image,
+};
+
+// 2. Page component (Server Component)
+export default async function Page({ params }: { params: { path?: string[] } }) {
+  const pagePathArray = params?.path ?? [];
+  const lookupPath = pagePathArray.join('/') || 'index';
+
+  const page = allPages.find((p: ContentPage) => p._meta.path === lookupPath) as ContentPage | undefined;
+
+  if (!page) {
+    notFound();
   }
-  const currentPageHref = tempHref; // Final href without trailing slash
 
-  const currentNavName = useMemo(() => {
-      if (isNavLoading || !navigation || navigation.length === 0) {
-          return "";
-      }
-      const foundName = findNodeNameByHref(navigation, currentPageHref);
-      return foundName || "";
-  }, [navigation, isNavLoading, currentPageHref, findNodeNameByHref]);
+  const initialRawMarkdown = page.rawContent;
+  // const initialCompiledContent = page.content; // No longer directly using pre-compiled for prod static
+  const initialFrontmatter = page.frontmatter || {};
+  const initialTocSections = page.toc || [];
 
-  // Parse markdown for TOC whenever it changes
-  useEffect(() => {
-    const newTocSections: Section[] = [];
-    headingRegex.lastIndex = 0;
-    let match;
-    while ((match = headingRegex.exec(markdown)) !== null) {
-      const level = match[1].length;
-      const rawText = match[2].trim();
-      let decodedText = rawText;
-      try {
-        const textarea = document.createElement('textarea');
-        textarea.innerHTML = rawText;
-        decodedText = textarea.value;
-      } catch (e) {
-        // console.error("[TOC Decode] Error decoding HTML entities:", e);
-      }
-      const finalText = decodedText.replace(/\\([#*_`[\]()])/g, '$1');
-      const id = finalText.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'section';
-      newTocSections.push({ depth: level, title: finalText, id });
-    }
-    setTocSections(newTocSections);
-  }, [markdown]);
-
-  // Handler for editor changes
-  const handleMarkdownChange = useCallback((newMarkdown: string) => {
-    setMarkdown(newMarkdown);
-  }, []);
-
-  // Actual Save Logic - Registered with context
-  const executeSave = useCallback(async () => {
-    setSaveStatus('saving');
-    try {
-      const response = await fetch('/api/docs/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          slug: pagePathArray, // Use slug from page params
-          content: markdown,     // Use current markdown state
-          frontmatter: frontmatter, // Use current frontmatter state
-        }),
-      });
-      const result = await response.json();
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Failed to save document');
-      }
-      setSaveStatus('saved', 'Document saved!');
-    } catch (error: any) {
-      console.error("Save error in Page:", error);
-      setSaveStatus('error', error.message || 'An unexpected error occurred.');
-    }
-  }, [markdown, frontmatter, pagePathArray, setSaveStatus]); // Dependencies needed for the save logic
-
-  // Register the save handler on mount/when logic changes
-  useEffect(() => {
-    registerSaveHandler(executeSave);
-    // Optional cleanup if needed
-    // return () => registerSaveHandler(async () => {});
-  }, [registerSaveHandler, executeSave]);
-
-  if (loading) {
+  if (process.env.NODE_ENV === 'development') {
+    // In development, render the editable page (client component)
     return (
-      <div className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
-        <p>Loading...</p>
-      </div>
-    );
-  }
-
-  if (error || !markdown) {
-    return (
-      <div className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
-        <p>{error || "Document not found."}</p>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <article className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
-        {isEditing && (
-          <div className="mb-4">
-            <label htmlFor="pageTitleInput" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Sidebar Navigation Name:
-            </label>
-            <input
-              type="text"
-              id="pageTitleInput"
-              value={currentNavName}
-              onChange={(e) => updateNavigationNodeName(currentPageHref, e.target.value)}
-              className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-              placeholder="Enter sidebar name..."
-              disabled={isNavLoading}
-            />
-            {navError && <p className="text-red-500 text-xs mt-1">Error loading navigation: {navError}</p>}
-          </div>
-        )}
-        <InlineMdxEditor
-          key={joinedPath}
-          markdown={markdown}
-          onChange={handleMarkdownChange}
-          frontmatter={frontmatter}
-          slug={pagePathArray}
-          isEditing={isEditing}
+      <Suspense fallback={
+        <div className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
+            <p>Loading Editor...</p>
+        </div>
+      }>
+        <EditableDocPage
+          initialRawMarkdown={initialRawMarkdown}
+          initialFrontmatter={initialFrontmatter}
+          pagePathArray={pagePathArray}
+          initialTocSections={initialTocSections}
         />
-      </article>
+      </Suspense>
+    );
+  } else {
+    // In production, render static content using MDXRemote
+    return (
+      <>
+        <article className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
+          <MDXRemote source={initialRawMarkdown} components={finalMdxComponents} />
+        </article>
 
-      <div className="sticky top-[var(--topnav-height)] hidden h-[calc(100vh-var(--topnav-height))] w-[var(--toc-width)] shrink-0 flex-col pt-[var(--article-padding-t)] lg:flex">
-        <Toc sections={tocSections} />
-      </div>
-    </>
-  )
+        <div className="sticky top-[var(--topnav-height)] hidden h-[calc(100vh-var(--topnav-height))] w-[var(--toc-width)] shrink-0 flex-col pt-[var(--article-padding-t)] lg:flex">
+          <Toc sections={initialTocSections} />
+        </div>
+      </>
+    );
+  }
 }

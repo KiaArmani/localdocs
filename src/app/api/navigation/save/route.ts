@@ -1,20 +1,19 @@
-import { promises as fs } from 'fs';
-import path from 'path';
+import { promises as fs } from 'node:fs';
+import path from 'node:path';
 import { NextResponse } from 'next/server';
 
 const navigationFilePath = path.join(process.cwd(), 'content', 'docs', 'navigation.json');
 
 export async function POST(request: Request) {
-  // Disallow saving in production
-  if (process.env.NODE_ENV === 'production') {
-    return NextResponse.json({ message: 'Operation not allowed in production.' }, { status: 403 });
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ success: false, message: 'API only available in development mode.' }, { status: 403 });
   }
 
   try {
     const navigationData = await request.json();
 
     if (!navigationData) {
-        return NextResponse.json({ message: 'No navigation data provided.' }, { status: 400 });
+        return NextResponse.json({ success: false, message: 'No navigation data provided.' }, { status: 400 });
     }
 
     // Optionally add validation logic here to ensure structure is correct
@@ -24,8 +23,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, message: 'Navigation saved successfully.' });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("API Error saving navigation:", error);
-    return NextResponse.json({ message: 'Internal Server Error saving navigation file.' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Internal Server Error saving navigation file.';
+    return NextResponse.json({ success: false, message }, { status: 500 });
   }
 } 
