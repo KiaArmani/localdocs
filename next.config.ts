@@ -1,4 +1,6 @@
 import { withContentCollections } from "@content-collections/next";
+import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev';
+import type { Configuration } from 'webpack';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -19,7 +21,7 @@ const nextConfig = {
     // TODO: Remove this once the underlying Next.js bug is fixed.
     ignoreBuildErrors: true,
   },
-  webpack(config, { dev, isServer }) {
+  webpack(config: Configuration, { dev, isServer }: { dev: boolean, isServer: boolean }) {
     // Apply watchOptions only in development and for the client bundle
     if (dev && !isServer) {
       config.watchOptions = {

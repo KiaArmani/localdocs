@@ -1,3 +1,5 @@
+export const runtime = 'edge';
+
 // 'use client'; // Removed: This is now a Server Component
 
 import React, { Suspense } from 'react'; // React and Suspense for React.lazy
