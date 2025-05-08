@@ -364,54 +364,57 @@ export function InlineMdxEditor({
 
   return (
     <div className="prose dark:prose-invert max-w-none w-full">
-      <MDXEditor
-        ref={editorRef}
-        key={slug.join('/')}
-        markdown={initialMarkdown}
-        onChange={isEditing ? onChange : undefined}
-        readOnly={!isEditing}
-        plugins={[
-          headingsPlugin(),
-          listsPlugin(),
-          linkPlugin(),
-          linkDialogPlugin(),
-          quotePlugin(),
-          thematicBreakPlugin(),
-          markdownShortcutPlugin(),
-          codeBlockPlugin({ defaultCodeBlockLanguage: 'tsx' }),
-          jsxPlugin({
-            jsxComponentDescriptors: defaultJsxComponents,
-          }),
-          tablePlugin(),
-          codeMirrorPlugin({
-            codeBlockLanguages: { tsx: 'TypeScript', css: 'CSS', js: 'JavaScript', cs: 'C#', cpp: 'C++' }
-          }),
-          imagePlugin({ imageUploadHandler }),
-          toolbarPlugin({
-            toolbarContents: isEditing ? () => (
-              <>
-                <UndoRedo />
-                <Separator />
-                <BoldItalicUnderlineToggles />
-                <Separator />
-                <ListsToggle />
-                <Separator />
-                <BlockTypeSelect />
-                <Separator />
-                <CreateLink />
-                <InsertImage />
-                <InsertTable />
-                <InsertThematicBreak />
-                <InsertCodeBlock />
-                <Separator />
-                <InsertAlertDropdown />
-              </>
-            ) : () => null
-          }),
-        ]}
-        className="dark:prose-invert prose-headings:font-display prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl font-sans"
-        contentEditableClassName="prose dark:prose-invert max-w-none font-sans [&_img]:outline [&_img]:outline-2 [&_img]:outline-blue-500 [&_img]:cursor-pointer [&_li[class*='_listItemUnchecked_']]:!pl-0 [&_li[class*='_listItemChecked_']]:!pl-0 [&_li[class*='_listItemUnchecked_']_span]:ml-2 [&_li[class*='_listItemChecked_']_span]:ml-2"
-      />
+      <div className="mdx-editor-wrapper">
+        <MDXEditor
+          ref={editorRef}
+          key={slug.join('/')}
+          markdown={initialMarkdown}
+          onChange={isEditing ? onChange : undefined}
+          readOnly={!isEditing}
+          plugins={[
+            headingsPlugin(),
+            listsPlugin(),
+            linkPlugin(),
+            linkDialogPlugin(),
+            quotePlugin(),
+            thematicBreakPlugin(),
+            markdownShortcutPlugin(),
+            codeBlockPlugin({ defaultCodeBlockLanguage: 'tsx' }),
+            jsxPlugin({
+              jsxComponentDescriptors: defaultJsxComponents,
+            }),
+            tablePlugin(),
+            codeMirrorPlugin({
+              codeBlockLanguages: { tsx: 'TypeScript', css: 'CSS', js: 'JavaScript', cs: 'C#', cpp: 'C++' }
+            }),
+            imagePlugin({ imageUploadHandler }),
+            toolbarPlugin({
+              toolbarClassName: 'sticky-editor-toolbar',
+              toolbarContents: isEditing ? () => (
+                <>
+                  <UndoRedo />
+                  <Separator />
+                  <BoldItalicUnderlineToggles />
+                  <Separator />
+                  <ListsToggle />
+                  <Separator />
+                  <BlockTypeSelect />
+                  <Separator />
+                  <CreateLink />
+                  <InsertImage />
+                  <InsertTable />
+                  <InsertThematicBreak />
+                  <InsertCodeBlock />
+                  <Separator />
+                  <InsertAlertDropdown />
+                </>
+              ) : () => null
+            }),
+          ]}
+          className="dark:prose-invert prose-headings:font-display prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl font-sans"
+          contentEditableClassName="prose dark:prose-invert max-w-none font-sans [&_img]:outline [&_img]:outline-2 [&_img]:outline-blue-500 [&_img]:cursor-pointer [&_li[class*='_listItemUnchecked_']]:!pl-0 [&_li[class*='_listItemChecked_']]:!pl-0 [&_li[class*='_listItemUnchecked_']_span]:ml-2 [&_li[class*='_listItemChecked_']_span]:ml-2"
+        />
+      </div>
     </div>
   );
 } 
