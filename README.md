@@ -90,34 +90,48 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## Deployment
 
-This project is a standard Next.js application and can be deployed to any hosting provider that supports Node.js.
+This project is configured for **Static HTML Export**. This means the build process generates plain HTML, CSS, and JavaScript files that can be hosted on any static hosting provider.
 
-**Important:** The inline editing features (editor UI, save/create/upload API routes) are automatically disabled when the application is built for production (`NODE_ENV=production`). The deployed version will function as a read-only documentation site.
+**Important:** The inline editing features (editor UI, save/create/upload API functionality) are automatically disabled when the application is built for production (`NODE_ENV=production`) and **will not work** in the static export, as they require a server runtime.
 
 ### Build
 
-Run the following command to build the application for production:
+Run the following command to build the application for static export:
 
 ```bash
 pnpm build
 ```
 
-This will generate an optimized build in the `.next` directory.
+This will generate a static site in the `out` directory.
 
-### Running the Production Server
+### Local Testing of Static Build
 
-After building, you can start the production server:
+After building, you can test the static output locally using a simple server like `serve`:
 
 ```bash
-pnpm start
+# Install serve globally if you haven't already
+pnpm add -g serve
+
+# Serve the output directory
+serve out
 ```
 
-This requires Node.js to be installed on your deployment server.
+Open the local URL provided by `serve` in your browser.
 
-### Deploying on Vercel
+### Deploying on Cloudflare Pages
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This project is well-suited for deployment on Cloudflare Pages using its static site hosting capabilities.
 
-Vercel will automatically detect Next.js, run the build command (`pnpm build`), and deploy the optimized output.
+1.  Log in to the Cloudflare dashboard and select your account.
+2.  Go to **Workers & Pages** > **Create** > **Pages** > **Connect to Git**.
+3.  Select your GitHub repository and click **Begin setup**.
+4.  In the **Build settings**, select **Next.js (Static HTML Export)** as the **Framework preset**. This should automatically configure the correct settings:
+    *   **Build command:** `pnpm build` (or `npx next build` if `pnpm` isn't auto-detected)
+    *   **Build output directory:** `out`
+5.  Deploy your site.
 
-Check out the [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details on deploying to Vercel and other platforms.
+Refer to the [Cloudflare Pages documentation](https://developers.cloudflare.com/pages/framework-guides/deploy-a-nextjs-site/#deploy-using-static-html-export) for more details.
+
+### Other Static Hosts
+
+You can deploy the contents of the `out` directory to any other static hosting provider (like Vercel static deployments, Netlify, GitHub Pages, etc.) by configuring their deployment settings accordingly.
