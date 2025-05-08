@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import type { Content, Parent } from 'mdast';
+import type { MdxJsxFlowElement, MdxJsxAttribute } from 'mdx'; // Import from mdx
 // Import MDXEditor and necessary plugins
 import {
   MDXEditor,
@@ -12,30 +14,10 @@ import {
   markdownShortcutPlugin,
   toolbarPlugin,
   codeBlockPlugin, // Basic code block support
-  // Import JSX Plugin and related types
   jsxPlugin,
   type JsxComponentDescriptor,
-  // Import type for JSX Editor Props
   type JsxEditorProps,
-  // Import components for toolbar directly
-  headingsPlugin as headingsPluginToolbar,
-  listsPlugin as listsPluginToolbar,
-  quotePlugin as quotePluginToolbar,
-  thematicBreakPlugin as thematicBreakPluginToolbar,
-  MDXEditorMethods, // Ensure MDXEditorMethods is imported
-  // // Import slash command plugin // <-- REMOVED
-  // slashCommandPlugin,
-  // // Import actions for slash commands // <-- REMOVED
-  // InsertCodeBlock,
-  // InsertImage,
-  // InsertTable,
-  // InsertThematicBreak,
-  // Import necessary types for headings
-  // type HeadingNode,
-  // $isHeadingNode,
-  // $getRoot,
-  // type ToolbarComponents, // Re-add ToolbarComponents type // <-- REMOVED (and was likely incorrect anyway)
-  // Toolbar components
+  type MDXEditorMethods,
   BlockTypeSelect,
   BoldItalicUnderlineToggles,
   CreateLink,
@@ -48,16 +30,35 @@ import {
   UndoRedo,
   tablePlugin,
   codeMirrorPlugin,
-  // Import the imagePlugin
   imagePlugin,
-  // frontmatterPlugin, // <-- REMOVED
-  // InsertFrontmatter, // <-- REMOVED
+  // Added for nested editor wrappers
+  NestedLexicalEditor,
+  // Added for inserting JSX
+  usePublisher,
+  insertJsx$,
+  linkDialogPlugin,
+  CodeToggle,
+  // ShowSandpackInfo, // Commenting out as it might not be used if sandpack is disabled
+  // ConditionalContents, // Commenting out as it might not be used if sandpack is disabled
+  // ChangeCodeMirrorLanguage, // Commenting out as it might not be used if sandpack is disabled
 } from '@mdxeditor/editor';
+import { AlertCircle, AlertTriangle, Info, Lightbulb, MessageSquareWarning, Siren } from 'lucide-react'; // Icon for the button AND the alert component
+
+// Import Shadcn UI DropdownMenu components
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 // Import default CSS
 import '@mdxeditor/editor/style.css';
 
-// Update GenericJsxEditor to accept JsxEditorProps
+// Import the Shadcn Alert components
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+
+// Original GenericJsxEditor for components not using wrappers yet
 const GenericJsxEditor = (props: JsxEditorProps) => {
   // Display basic info for the placeholder
   return (
@@ -75,17 +76,143 @@ const GenericJsxEditor = (props: JsxEditorProps) => {
   );
 };
 
-// Refine descriptors for components used in index.mdx
+// Wrapper for the standard (now "warning") Alert
+const AlertEditorWrapper: React.FC<JsxEditorProps> = ({ mdastNode }) => {
+  return (
+    <Alert
+      variant="warning"
+      className="mt-4 p-0 py-2 px-3 [&_[contenteditable=true]]:bg-transparent [&_[contenteditable=true]]:my-0"
+    >
+      <AlertCircle className="h-6 w-6" />
+      <AlertDescription className="[&_p]:m-0">
+        <NestedLexicalEditor
+          getContent={(currentMdastNode) => (currentMdastNode as MdxJsxFlowElement).children || []}
+          getUpdatedMdastNode={(currentMdastNode, children) => {
+            return { ...(currentMdastNode as MdxJsxFlowElement), children };
+          }}
+        />
+      </AlertDescription>
+    </Alert>
+  );
+};
+
+// Wrapper for ImportantAlert
+const ImportantAlertEditorWrapper: React.FC<JsxEditorProps> = ({ mdastNode }) => {
+  return (
+    <Alert
+      variant="important"
+      className="mt-4 p-0 py-2 px-3 [&_[contenteditable=true]]:bg-transparent [&_[contenteditable=true]]:my-0"
+    >
+      <AlertTriangle className="h-6 w-6" />
+      <AlertDescription className="[&_p]:m-0">
+        <NestedLexicalEditor
+          getContent={(currentMdastNode) => (currentMdastNode as MdxJsxFlowElement).children || []}
+          getUpdatedMdastNode={(currentMdastNode, children) => {
+            return { ...(currentMdastNode as MdxJsxFlowElement), children };
+          }}
+        />
+      </AlertDescription>
+    </Alert>
+  );
+};
+
+// Wrapper for InfoAlert
+const InfoAlertEditorWrapper: React.FC<JsxEditorProps> = ({ mdastNode }) => {
+  return (
+    <Alert
+      variant="info"
+      className="mt-4 p-0 py-2 px-3 [&_[contenteditable=true]]:bg-transparent [&_[contenteditable=true]]:my-0"
+    >
+      <Info className="h-6 w-6" />
+      <AlertDescription className="[&_p]:m-0">
+        <NestedLexicalEditor
+          getContent={(currentMdastNode) => (currentMdastNode as MdxJsxFlowElement).children || []}
+          getUpdatedMdastNode={(currentMdastNode, children) => {
+            return { ...(currentMdastNode as MdxJsxFlowElement), children };
+          }}
+        />
+      </AlertDescription>
+    </Alert>
+  );
+};
+
+// Wrapper for AlertDescription (used by all alert types)
+const AlertDescriptionEditorWrapper: React.FC<JsxEditorProps> = ({ mdastNode }) => {
+  return (
+    <NestedLexicalEditor
+      getContent={(currentMdastNode) => (currentMdastNode as MdxJsxFlowElement).children || []}
+      getUpdatedMdastNode={(currentMdastNode, children) => {
+        return { ...(currentMdastNode as MdxJsxFlowElement), children };
+      }}
+    />
+  );
+};
+
+// JsxComponentDescriptors using the wrappers
 const defaultJsxComponents: JsxComponentDescriptor[] = [
   {
-    name: 'Callout',
-    kind: 'text',
-    props: [
-      { name: 'type', type: 'string' },
-      { name: 'title', type: 'string' },
-    ],
-    hasChildren: true,
-    Editor: GenericJsxEditor
+    name: 'Alert',
+    kind: 'flow',
+    props: [], // Keeping props empty as we are not defining editable attributes here
+    Editor: AlertEditorWrapper,
+    getInitialMdastNode: (): MdxJsxFlowElement => ({
+      type: 'mdxJsxFlowElement',
+      name: 'Alert',
+      attributes: [],
+      children: [
+        {
+          type: 'mdxJsxFlowElement',
+          name: 'AlertDescription',
+          attributes: [],
+          children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Heads up!' }] }],
+        } as MdxJsxFlowElement,
+      ],
+    }),
+  },
+  {
+    name: 'ImportantAlert',
+    kind: 'flow',
+    props: [],
+    Editor: ImportantAlertEditorWrapper,
+    getInitialMdastNode: (): MdxJsxFlowElement => ({
+      type: 'mdxJsxFlowElement',
+      name: 'ImportantAlert',
+      attributes: [],
+      children: [
+        {
+          type: 'mdxJsxFlowElement',
+          name: 'AlertDescription',
+          attributes: [],
+          children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Important note!' }] }],
+        } as MdxJsxFlowElement,
+      ],
+    }),
+  },
+  {
+    name: 'InfoAlert',
+    kind: 'flow',
+    props: [],
+    Editor: InfoAlertEditorWrapper,
+    getInitialMdastNode: (): MdxJsxFlowElement => ({
+      type: 'mdxJsxFlowElement',
+      name: 'InfoAlert',
+      attributes: [],
+      children: [
+        {
+          type: 'mdxJsxFlowElement',
+          name: 'AlertDescription',
+          attributes: [],
+          children: [{ type: 'paragraph', children: [{ type: 'text', value: 'For your information.' }] }],
+        } as MdxJsxFlowElement,
+      ],
+    }),
+  },
+  {
+    name: 'AlertDescription',
+    kind: 'flow',
+    props: [],
+    Editor: AlertDescriptionEditorWrapper,
+    // AlertDescription is complex and typically a child, no getInitialMdastNode needed when inserted this way
   },
   {
     name: 'Cards',
@@ -121,7 +248,7 @@ const defaultJsxComponents: JsxComponentDescriptor[] = [
 
 interface InlineMdxEditorProps {
   markdown: string;
-  frontmatter: Record<string, any>;
+  frontmatter: Record<string, string | string[] | number | boolean | Date | null>; // More specific than any
   slug: string[];
   isEditing: boolean;
   onChange: (markdown: string) => void;
@@ -139,7 +266,7 @@ async function imageUploadHandler(image: File): Promise<string> {
     });
 
     if (!response.ok) {
-      const errorResult = await response.json().catch(() => ({ message: 'Upload failed with status: ' + response.status }));
+      const errorResult = await response.json().catch(() => ({ message: `Upload failed with status: ${response.status}` }));
       throw new Error(errorResult.message || 'Image upload failed');
     }
 
@@ -150,49 +277,74 @@ async function imageUploadHandler(image: File): Promise<string> {
     }
 
     console.log(`Image uploaded via API: ${result.url}`);
-    return result.url; // Return the URL from the API
+    return result.url;
 
-  } catch (error: any) {
+  } catch (error) { // Catch as unknown, then check type
+    let errorMessage = 'An unknown error occurred during image upload.';
+    if (error instanceof Error) {
+      errorMessage = error.message;
+    }
     console.error("Error uploading image:", error);
-    // Handle error appropriately - maybe show a notification to the user
-    // For now, we'll throw to prevent the editor from inserting a broken link
-    // Or return a default placeholder image on failure?
-    // Let's throw for now, so the user knows it failed.
-    alert(`Image upload failed: ${error.message}`); // Simple alert for now
-    throw error; // Re-throw to signal failure to the imagePlugin
+    alert(`Image upload failed: ${errorMessage}`);
+    throw error;
   }
 }
 
-// // Toolbar component - Requires components and editorRef (allowing null) // <-- REMOVED
-// const SimpleToolbar = ({
-//   components,
-//   editorRef,
-// }: {
-//   components: any; // Use any for now
-//   editorRef: React.RefObject<MDXEditorMethods | null>;
-// }) => {
-//   if (!components) return null;
-//   return (
-//     <components.ToolbarRoot>
-//        {/* Keep standard buttons */}
-//        <components.H1 />
-//        <components.H2 />
-//        <components.H3 />
-//        <components.Separator />
-//        <components.BulletedList />
-//        <components.OrderedList />
-//        <components.Separator />
-//        <components.Blockquote />
-//        <components.ThematicBreak />
-//        <components.Separator />
-//        <components.CreateLink />
-//        <components.CodeBlock />
-//        <components.Separator />
-//        <components.Undo />
-//        <components.Redo />
-//     </components.ToolbarRoot>
-//   );
-// };
+// New Dropdown Component for Inserting Alerts
+const InsertAlertDropdown: React.FC = () => {
+  const insertJsx = usePublisher(insertJsx$);
+
+  const alertTypes = [
+    {
+      name: 'Alert',
+      label: 'Warning',
+      icon: <MessageSquareWarning className="w-4 h-4 mr-2 text-orange-500" />,
+    },
+    {
+      name: 'ImportantAlert',
+      label: 'Important',
+      icon: <Siren className="w-4 h-4 mr-2 text-red-500" />,
+    },
+    {
+      name: 'InfoAlert',
+      label: 'Info',
+      icon: <Lightbulb className="w-4 h-4 mr-2 text-blue-500" />,
+    },
+  ];
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          title="Insert Alert Variant"
+          className="p-1.5 rounded hover:bg-primary-foreground"
+        >
+          <MessageSquareWarning className="w-5 h-5" />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent>
+        {alertTypes.map((alertType) => (
+          <DropdownMenuItem
+            key={alertType.name}
+            onClick={() => {
+              console.log(`[InsertAlertDropdown] Inserting: name=${alertType.name}, kind=flow, props={}`);
+              insertJsx({
+                name: alertType.name,
+                kind: 'flow',
+                props: {}, // The JsxComponentDescriptor will provide the initial children structure via getInitialMdastNode
+              });
+            }}
+            className="flex items-center cursor-pointer"
+          >
+            {alertType.icon}
+            <span>{alertType.label}</span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+};
 
 export function InlineMdxEditor({
   markdown: initialMarkdown,
@@ -222,6 +374,7 @@ export function InlineMdxEditor({
           headingsPlugin(),
           listsPlugin(),
           linkPlugin(),
+          linkDialogPlugin(),
           quotePlugin(),
           thematicBreakPlugin(),
           markdownShortcutPlugin(),
@@ -233,12 +386,9 @@ export function InlineMdxEditor({
           codeMirrorPlugin({
             codeBlockLanguages: { tsx: 'TypeScript', css: 'CSS', js: 'JavaScript', cs: 'C#', cpp: 'C++' }
           }),
-          // Add the imagePlugin with the placeholder handler
           imagePlugin({ imageUploadHandler }),
-          // Toolbar - configured to only show when isEditing is true
           toolbarPlugin({
             toolbarContents: isEditing ? () => (
-              // Use the directly imported toolbar components
               <>
                 <UndoRedo />
                 <Separator />
@@ -251,16 +401,16 @@ export function InlineMdxEditor({
                 <CreateLink />
                 <InsertImage />
                 <InsertTable />
-                <InsertThematicBreak/>
-                <Separator />
+                <InsertThematicBreak />
                 <InsertCodeBlock />
+                <Separator />
+                <InsertAlertDropdown />
               </>
-            ) : () => null // Render nothing if not editing
+            ) : () => null
           }),
         ]}
-        className="dark:prose-invert prose-headings:font-display prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl font-sans prose-p:font-sans"
-        // Make image outline opaque and thicker for easier selection
-        contentEditableClassName="prose dark:prose-invert max-w-none [&_img]:outline [&_img]:outline-2 [&_img]:outline-blue-500 [&_img]:cursor-pointer"
+        className="dark:prose-invert prose-headings:font-display prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl font-sans"
+        contentEditableClassName="prose dark:prose-invert max-w-none font-sans [&_img]:outline [&_img]:outline-2 [&_img]:outline-blue-500 [&_img]:cursor-pointer [&_li[class*='_listItemUnchecked_']]:!pl-0 [&_li[class*='_listItemChecked_']]:!pl-0 [&_li[class*='_listItemUnchecked_']_span]:ml-2 [&_li[class*='_listItemChecked_']_span]:ml-2"
       />
     </div>
   );

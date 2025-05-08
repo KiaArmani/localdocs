@@ -80,6 +80,14 @@ export const NavigationProvider = ({ children }: NavigationProviderProps) => {
 
   // Function to save the current navigation state via API
   const saveNavigation = useCallback(async () => {
+    // Prevent saving if navigation is empty (e.g., due to load error)
+    if (!navigation || navigation.length === 0) {
+      console.warn("NavigationContext: Attempted to save empty navigation. Aborting save.");
+      // Optionally, throw an error or set a specific error state
+      // throw new Error("Cannot save empty navigation."); 
+      return; // Do not proceed with saving an empty navigation
+    }
+
     // Consider adding status states (saving, saved, error) here if needed
     try {
       const response = await fetch('/api/navigation/save', {

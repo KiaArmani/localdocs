@@ -29,9 +29,9 @@
     --topnav-height: 3.5rem;
     --article-padding-t: var(--p-content-gap-heading);
     --article-padding-x: 0;
-    --article-padding-x-md: theme(padding.6);
-    --article-padding-x-lg: theme(padding.10);
-    --article-padding-x-xl: theme(padding.14);
+    --article-padding-x-md: 1.5rem;
+    --article-padding-x-lg: 2.5rem;
+    --article-padding-x-xl: 3.5rem;
     --nav-heading-font-size: var(--p-h6-font-size);
     --nav-heading-line-height: var(--p-h6-font-height);
     --nav-heading-letter-spacing: var(--p-h6-letter-spacing);
@@ -115,8 +115,6 @@
   }
 }
 
-
-
 @layer base {
   * {
     @apply border-border;
@@ -124,4 +122,28 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Override prose-ui list padding for MDXEditor checklist items */
+/* Targets .prose-ui, then .mdxeditor-root-contenteditable (editor's content area), then ul, then specific li classes */
+/* REMOVED padding-left override for li items based on new findings */
+/*
+.prose-ui .mdxeditor-root-contenteditable ul > li[class*="_listItemUnchecked_"],
+.prose-ui .mdxeditor-root-contenteditable ul > li[class*="_listItemChecked_"] {
+  padding-left: 0px !important;
+}
+*/
+
+/* Styles for MDXEditor checklist items */
+.prose-ui .mdxeditor-root-contenteditable ul > li[class*="_listItemUnchecked_"],
+.prose-ui .mdxeditor-root-contenteditable ul > li[class*="_listItemChecked_"] {
+  display: flex; /* Ensure flex layout for vertical alignment */
+  align-items: center; /* Vertically align checkbox and text */
+  /* The editor's own CSS will handle padding for the checkbox pseudo-element */
+}
+
+.prose-ui .mdxeditor-root-contenteditable ul > li[class*="_listItemUnchecked_"] > span,
+.prose-ui .mdxeditor-root-contenteditable ul > li[class*="_listItemChecked_"] > span {
+  margin-left: 1.5rem; /* Increased margin (Tailwind's ml-6). Adjust if needed. */
+  line-height: 1; /* Attempt to make the span's box tight around the text */
 }

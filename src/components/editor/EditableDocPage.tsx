@@ -20,29 +20,31 @@ interface Section {
   depth: number;
 }
 
+// Define the specific Frontmatter type expected by InlineMdxEditor
+type EditorFrontmatter = Record<string, string | string[] | number | boolean | Date | null>;
+
 // Props for the editable page
 type EditableDocPageProps = {
-  initialRawMarkdown: string; // Changed from initialMarkdown to reflect it's raw
-  initialFrontmatter: Record<string, unknown>; // Changed any to unknown
+  initialRawMarkdown: string;
+  initialFrontmatter: EditorFrontmatter; // Use the specific type
   pagePathArray: string[];
-  initialTocSections: Section[]; // Static TOC for initial render, can be updated client-side
+  initialTocSections: Section[];
 };
 
-const headingRegex = /^(#{1,6})\s+(.*)/gm; // For client-side TOC updates
+const headingRegex = /^(#{1,6})\s+(.*)/gm;
 
 export default function EditableDocPage({
   initialRawMarkdown,
   initialFrontmatter,
   pagePathArray,
-  initialTocSections // Use this for initial display, then update
+  initialTocSections
 }: EditableDocPageProps) {
   const { isEditing } = useEditMode(); // Assumes EditModeProvider is ancestor
   const { registerSaveHandler, setSaveStatus } = useSaveContext(); // Assumes SaveProvider is ancestor
   const { navigation, updateNavigationNodeName, isLoading: isNavLoading, error: navError } = useNavigation(); // Assumes NavigationProvider is ancestor
 
   const [markdown, setMarkdown] = useState<string>(initialRawMarkdown);
-  const [frontmatter, setFrontmatter] = useState<Record<string, unknown>>(initialFrontmatter); // Changed any to unknown
-  // Initialize with static TOC from server, then update based on client-side markdown changes
+  const [frontmatter, setFrontmatter] = useState<EditorFrontmatter>(initialFrontmatter); // Use the specific type for state
   const [tocSections, setTocSections] = useState<Section[]>(initialTocSections);
 
   const isMountedRef = React.useRef(false);
@@ -60,10 +62,14 @@ export default function EditableDocPage({
       // Logic for non-editing TOC updates (can be left as is or refined)
     }
     const newTocSections: Section[] = [];
-    headingRegex.lastIndex = 0;
+    headingRegex.lastIndex = 0; // Reset regex state
     let match: RegExpExecArray | null;
-    // eslint-disable-next-line no-cond-assign
-    while ((match = headingRegex.exec(markdown)) !== null) { // Linter rule for assignment in condition disabled for this line
+    // eslint-disable-next-line no-constant-condition
+    while (true) { // Modified loop structure
+      match = headingRegex.exec(markdown);
+      if (match === null) {
+        break;
+      }
       const level = match[1].length;
       const rawText = match[2].trim();
       // Basic decoding and ID generation (copied from original page.tsx)
@@ -103,6 +109,7 @@ export default function EditableDocPage({
     if (!isMountedRef.current) return;
     setSaveStatus('saving');
     try {
+      console.log('[EditableDocPage] Saving with pagePathArray:', pagePathArray);
       const response = await fetch('/api/docs/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -17,13 +17,13 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'Prose UI Docs Starter',
+  title: 'Motion',
   description: 'Documentation starter template with Next.js and Prose UI. Free and open-source.',
   openGraph: {
     type: 'website',
-    title: 'Prose UI Docs Starter',
+    title: 'Motion',
     description: 'Documentation starter template with Next.js and Prose UI. Free and open-source.',
-    url: 'https://prose-ui-docs-starter.vercel.app',
+    url: 'https://motionco.re',
   },
   icons: [
     {

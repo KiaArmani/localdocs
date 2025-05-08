@@ -39,12 +39,12 @@ export const Logo = ({
       className="flex items-center gap-1 text-nowrap font-semibold"
     >
       <SVG className="mr-0.5" />
-      Docs starter
+      Motion
     </Link>
   ) : (
     <div className="flex items-center gap-1 text-nowrap font-semibold">
       <SVG className="mr-0.5" />
-      Docs starter
+      Motion
     </div>
   )
 }

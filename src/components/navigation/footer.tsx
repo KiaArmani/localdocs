@@ -7,12 +7,12 @@ export const Footer = () => (
       <div className="flex items-center gap-4 md:gap-1">
         <Logo />
         <p className="text-color-lowest !my-0 text-sm font-medium">
-          Open source documentation stater template with{' '}
+          Open source documentation starter template with{' '}
           <Link href="https://nextjs.org">Next.js</Link> and{' '}
           <Link href="https://prose-ui.com">Prose UI.</Link> Source code available on{' '}
           <a
             className="text-color-low hover:text-color-base underline decoration-[hsl(var(--p-color-text-lowest))] underline-offset-4 hover:decoration-[hsl(var(--p-color-text-base))]"
-            href="https://github.com/valdemaras/prose-ui"
+            href="https://github.com/KiaArmani/localdocs"
           >
             GitHub
           </a>
