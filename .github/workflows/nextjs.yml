@@ -60,6 +60,8 @@ jobs:
             ${{ runner.os }}-nextjs-${{ hashFiles('**/pnpm-lock.yaml') }}-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Generate content collections
+        run: pnpm content-collections build
       - name: Build with Next.js
         run: env && pnpm build --debug
       - name: Upload artifact
