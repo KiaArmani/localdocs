@@ -155,57 +155,18 @@ const defaultJsxComponents: JsxComponentDescriptor[] = [
     kind: 'flow',
     props: [], // Keeping props empty as we are not defining editable attributes here
     Editor: AlertEditorWrapper,
-    getInitialMdastNode: (): MdxJsxFlowElement => ({
-      type: 'mdxJsxFlowElement',
-      name: 'Alert',
-      attributes: [],
-      children: [
-        {
-          type: 'mdxJsxFlowElement',
-          name: 'AlertDescription',
-          attributes: [],
-          children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Heads up!' }] }],
-        } as MdxJsxFlowElement,
-      ],
-    }),
   },
   {
     name: 'ImportantAlert',
     kind: 'flow',
     props: [],
     Editor: ImportantAlertEditorWrapper,
-    getInitialMdastNode: (): MdxJsxFlowElement => ({
-      type: 'mdxJsxFlowElement',
-      name: 'ImportantAlert',
-      attributes: [],
-      children: [
-        {
-          type: 'mdxJsxFlowElement',
-          name: 'AlertDescription',
-          attributes: [],
-          children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Important note!' }] }],
-        } as MdxJsxFlowElement,
-      ],
-    }),
   },
   {
     name: 'InfoAlert',
     kind: 'flow',
     props: [],
     Editor: InfoAlertEditorWrapper,
-    getInitialMdastNode: (): MdxJsxFlowElement => ({
-      type: 'mdxJsxFlowElement',
-      name: 'InfoAlert',
-      attributes: [],
-      children: [
-        {
-          type: 'mdxJsxFlowElement',
-          name: 'AlertDescription',
-          attributes: [],
-          children: [{ type: 'paragraph', children: [{ type: 'text', value: 'For your information.' }] }],
-        } as MdxJsxFlowElement,
-      ],
-    }),
   },
   {
     name: 'AlertDescription',
@@ -299,16 +260,40 @@ const InsertAlertDropdown: React.FC = () => {
       name: 'Alert',
       label: 'Warning',
       icon: <MessageSquareWarning className="w-4 h-4 mr-2 text-orange-500" />,
+      initialChildren: [
+        {
+          type: 'mdxJsxFlowElement',
+          name: 'AlertDescription',
+          attributes: [],
+          children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Heads up!' }] }],
+        } as MdxJsxFlowElement,
+      ],
     },
     {
       name: 'ImportantAlert',
       label: 'Important',
       icon: <Siren className="w-4 h-4 mr-2 text-red-500" />,
+      initialChildren: [
+        {
+          type: 'mdxJsxFlowElement',
+          name: 'AlertDescription',
+          attributes: [],
+          children: [{ type: 'paragraph', children: [{ type: 'text', value: 'Important note!' }] }],
+        } as MdxJsxFlowElement,
+      ],
     },
     {
       name: 'InfoAlert',
       label: 'Info',
       icon: <Lightbulb className="w-4 h-4 mr-2 text-blue-500" />,
+      initialChildren: [
+        {
+          type: 'mdxJsxFlowElement',
+          name: 'AlertDescription',
+          attributes: [],
+          children: [{ type: 'paragraph', children: [{ type: 'text', value: 'For your information.' }] }],
+        } as MdxJsxFlowElement,
+      ],
     },
   ];
 
@@ -332,7 +317,8 @@ const InsertAlertDropdown: React.FC = () => {
               insertJsx({
                 name: alertType.name,
                 kind: 'flow',
-                props: {}, // The JsxComponentDescriptor will provide the initial children structure via getInitialMdastNode
+                props: {},
+                children: alertType.initialChildren
               });
             }}
             className="flex items-center cursor-pointer"
@@ -385,7 +371,7 @@ export function InlineMdxEditor({
             }),
             tablePlugin(),
             codeMirrorPlugin({
-              codeBlockLanguages: { tsx: 'TypeScript', css: 'CSS', js: 'JavaScript', cs: 'C#', cpp: 'C++' }
+              codeBlockLanguages: { tsx: 'TypeScript', css: 'CSS', js: 'JavaScript', cs: 'C#', cpp: 'C++', mermaid: 'text/plain' }
             }),
             imagePlugin({ imageUploadHandler }),
             toolbarPlugin({

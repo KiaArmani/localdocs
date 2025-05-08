@@ -10,6 +10,12 @@ import { MDXRemote } from 'next-mdx-remote/rsc'; // Import MDXRemote
 import rehypeExternalLinks from 'rehype-external-links'; // Added this import
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react'; // Import icons
+import rehypeSlug from "rehype-slug";
+import rehypeAutolinkHeadings from "rehype-autolink-headings";
+import rehypePrettyCode from "rehype-pretty-code";
+import remarkGfm from "remark-gfm";
+import rehypeMermaid from "@/lib/rehype-mermaid.mjs"; // Import the new Rehype plugin
+import Mermaid from "@/components/mdx/Mermaid"; // Restore the real Mermaid import
 
 // Dynamically import the editor component for development only
 // Note: React.lazy can only be used in Client Components or parent Server Components that use Suspense.
@@ -86,18 +92,29 @@ const InfoAlertProd = (props: React.PropsWithChildren<React.HTMLAttributes<HTMLD
   </Alert>
 );
 
+// Define a dummy placeholder component
+/* // Comment out placeholder
+const PlaceholderMermaid = ({ chart }: { chart: string }) => (
+  <pre>
+    <code>MERMAID_PLACEHOLDER: Chart content below (rehype-mermaid is currently disabled):
+      {chart}
+    </code>
+  </pre>
+);
+*/
+
 // Combine standard Prose UI components with locally defined ones
 const finalMdxComponents = {
-  ...mdxComponents,
+  ...mdxComponents, // From @prose-ui/next
   Cards,
   Frame,
-  Image,
-  // Map MDX tags to the new production wrapper components
-  Alert: WarningAlertProd,             // <Alert> tag will use WarningAlertProd
-  ImportantAlert: ImportantAlertProd,  // <ImportantAlert> tag
-  InfoAlert: InfoAlertProd,            // <InfoAlert> tag
-  AlertDescription,                   // Pass through AlertDescription from @/components/ui/alert
-  AlertTitle,                         // Pass through AlertTitle from @/components/ui/alert
+  Image, 
+  Alert: WarningAlertProd,            
+  ImportantAlert: ImportantAlertProd,  
+  InfoAlert: InfoAlertProd,           
+  AlertDescription,                  
+  AlertTitle,                        
+  Mermaid, // Use the real Mermaid component
 };
 
 // 2. Page component (Server Component)
@@ -112,7 +129,7 @@ export default async function Page({ params: initialParams }: { params: { path?:
   }
 
   const initialRawMarkdown = page.rawContent;
-  const initialFrontmatter = page.frontmatter || {};
+  const initialFrontmatter = (page.frontmatter || {}) as Record<string, string | string[] | number | boolean | Date | null>; // Type assertion
   const initialTocSections = page.toc || [];
 
   if (process.env.NODE_ENV === 'development') {
@@ -135,20 +152,28 @@ export default async function Page({ params: initialParams }: { params: { path?:
   }
 
   // In production, render static content using MDXRemote (else block removed)
+  // const simpleTestMdx = "## Hello World\n\nThis is a simple test.\n\n```mermaid\ngraph TD\nA --> B\n```\n"; // Keep for later if needed
+
   return (
     <>
       <article className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
         <MDXRemote
-          source={initialRawMarkdown}
+          source={initialRawMarkdown} // Restore actual markdown content
           components={finalMdxComponents}
           options={{
             mdxOptions: {
+              remarkPlugins: [remarkGfm],
               rehypePlugins: [
-                [rehypeExternalLinks, { target: '_blank', rel: ['noopener', 'noreferrer'] }]
+                rehypeSlug,
+                [rehypeAutolinkHeadings, { behavior: "wrap" }],
+                [rehypeExternalLinks, { target: '_blank', rel: ['noopener', 'noreferrer'] }], 
+                rehypeMermaid, // Run Mermaid transformation FIRST
+                [rehypePrettyCode, { theme: "slack-dark" }], // Then run pretty code on remaining blocks
               ],
+              format: "mdx",
             },
           }}
-        /> {/* Restored to use initialRawMarkdown and finalMdxComponents */}
+        /> 
       </article>
 
       <div className="sticky top-[var(--topnav-height)] hidden h-[calc(100vh-var(--topnav-height))] w-[var(--toc-width)] shrink-0 flex-col pt-[var(--article-padding-t)] lg:flex">
