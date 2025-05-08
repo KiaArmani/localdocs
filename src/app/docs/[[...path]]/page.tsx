@@ -1,5 +1,3 @@
-export const runtime = 'edge';
-
 // 'use client'; // Removed: This is now a Server Component
 
 import React, { Suspense } from 'react'; // React and Suspense for React.lazy
@@ -42,17 +40,6 @@ interface ContentPage {
   path: string;
   frontmatter?: Record<string, unknown>; // Optional frontmatter
   [key: string]: unknown; // Changed any to unknown
-}
-
-// 1. Implement generateStaticParams
-export async function generateStaticParams() {
-  return allPages.map((page: ContentPage) => { // Added ContentPage type to page
-    const pathSegments = page.path.split('/').filter(Boolean);
-    if (page.path === '/') {
-        return { path: [] };
-    }
-    return { path: pathSegments };
-  });
 }
 
 // Temporary simple components for testing MDX mapping
@@ -183,4 +170,16 @@ export default async function Page({ params: initialParams }: { params: { path?:
       </div>
     </>
   );
+}
+
+// 1. Implement generateStaticParams
+export async function generateStaticParams() {
+  return allPages.map((page: ContentPage) => { 
+    const pathSegments = page.path.split('/').filter(Boolean);
+    // Handle root index page explicitly
+    if (page.path === '/') {
+        return { path: [] }; 
+    }
+    return { path: pathSegments };
+  });
 }

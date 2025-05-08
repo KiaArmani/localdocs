@@ -1,9 +1,11 @@
 import { withContentCollections } from "@content-collections/next";
-import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev';
+// import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev'; // Remove import
 import type { Configuration } from 'webpack';
+import type { NextConfig } from 'next'; // Import NextConfig type
 
 /** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = { // Explicitly type the config object
+  output: 'export',
   // Remove webpackDevMiddleware
   // webpackDevMiddleware: (config) => {
   //   // Important: return the modified config
