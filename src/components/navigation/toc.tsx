@@ -116,6 +116,16 @@ type ItemProps = {
 }
 
 const Item = ({ section, active, onClick }: ItemProps) => {
+  // Decode HTML entities from the title for display
+  let displayTitle = section.title;
+  try {
+    const textarea = document.createElement('textarea');
+    textarea.innerHTML = section.title;
+    displayTitle = textarea.value;
+  } catch (e) {
+    // displayTitle remains the original title if decoding fails
+  }
+
   return (
     <li>
       <Button
@@ -126,7 +136,7 @@ const Item = ({ section, active, onClick }: ItemProps) => {
         className={classes(section.depth < 3 ? 'pl-0' : 'pl-3', 'text-wrap')}
       >
         <Link href={`#${section.id}`} onClick={onClick}>
-          {section.title}
+          {displayTitle}
         </Link>
       </Button>
     </li>

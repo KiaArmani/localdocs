@@ -11,11 +11,12 @@ const pages = defineCollection({
     title: z.optional(z.string()),
   }),
   transform: async (page, ctx) => {
-    const { toc, title } = await extractMetadata(page.content)
-    const content = await compileMDX(ctx, page, {
+    const rawMarkdown = page.content;
+    const { toc, title } = await extractMetadata(rawMarkdown);
+    const compiledContent = await compileMDX(ctx, { ...page, content: rawMarkdown }, {
       remarkPlugins: remarkPlugins(),
-    })
-    let path
+    });
+    let path: string;
     if (page._meta.path === 'index') {
       path = ''
     } else if (page._meta.path.endsWith('/index')) {
@@ -25,10 +26,11 @@ const pages = defineCollection({
     }
     return {
       ...page,
+      rawContent: rawMarkdown,
+      content: compiledContent,
       path: `/${path}`,
       toc,
       title: page.title ?? title,
-      content,
     }
   },
 })

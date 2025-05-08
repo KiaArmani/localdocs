@@ -1,8 +1,8 @@
-import { Button } from '@/components/ui/button'
-import { Feature } from '@/components/feature'
+import { Button, buttonVariants } from '@/components/ui/button' // Import buttonVariants
+import { Feature } from '@/components/feature' // Restore Feature
 import Link from 'next/link'
-import { SiVercel, SiNextdotjs, SiTailwindcss, SiShadcnui } from '@icons-pack/react-simple-icons'
-import { Footer } from '@/components/navigation/footer'
+import { SiVercel, SiNextdotjs, SiTailwindcss, SiShadcnui } from '@icons-pack/react-simple-icons' // Restore icons
+import { Footer } from '@/components/navigation/footer' // Restore Footer
 
 export default () => {
   return (
@@ -18,24 +18,28 @@ export default () => {
             for crafting stunning documentation websites.
           </p>
           <div className="mt-16 justify-center flex flex-col md:flex-row items-center gap-4 md:gap-2">
-            <Button size="lg" asChild>
-              <Link href="/docs">View Documentation</Link>
-            </Button>
-            <Button variant="link" size="lg" asChild>
-              <Link
-                href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvrepsys%2Fprose-ui-docs-starter"
-                target="_blank"
-              >
-                <SiVercel size={16} />
-                Deploy with Vercel
-              </Link>
-            </Button>
+            {/* Apply buttonVariants directly to Link */}
+            <Link 
+              href="/docs" 
+              className={buttonVariants({ size: 'lg' })}
+            >
+              View Documentation
+            </Link>
+            
+            {/* Apply buttonVariants directly to Link */}
+            <Link
+              href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvrepsys%2Fprose-ui-docs-starter"
+              target="_blank"
+              className={buttonVariants({ variant: 'link', size: 'lg' })}
+            >
+              <SiVercel size={16} />
+              Deploy with Vercel
+            </Link>
           </div>
         </div>
 
+        {/* Restore Features section */}
         <div className="mt-16 md:mt-32 h-px w-full bg-gradient-to-r from-transparent via-[hsl(var(--p-color-border))] to-transparent"></div>
-
-        {/* //[&>*:nth-child(even)]:border-l-2 [&>*]:border-color-base [&>*]:border-t-2 */}
         <div className="md:px-12 md:mt-12 grid grid-cols-2 md:grid-cols-3 gap-x-5 md:gap-x-24">
           <Feature
             icon={<SiNextdotjs size={20} />}
@@ -68,7 +72,9 @@ export default () => {
             description="Uses Content Collections with MDX bundler to manage MDX content."
           />
         </div>
+
       </div>
+      {/* Restore Footer */}
       <Footer />
     </div>
   )

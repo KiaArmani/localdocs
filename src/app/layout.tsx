@@ -3,6 +3,7 @@ import localFont from 'next/font/local'
 import './globals.css'
 import { ThemeProvider } from 'next-themes'
 import { TopNav } from '@/components/navigation/topnav'
+import { DevModeProviders } from '@/contexts/DevModeProviders'
 
 const geistSans = localFont({
   src: './fonts/GeistVF.woff',
@@ -16,13 +17,13 @@ const geistMono = localFont({
 })
 
 export const metadata: Metadata = {
-  title: 'Prose UI Docs Starter',
+  title: 'Motion',
   description: 'Documentation starter template with Next.js and Prose UI. Free and open-source.',
   openGraph: {
     type: 'website',
-    title: 'Prose UI Docs Starter',
+    title: 'Motion',
     description: 'Documentation starter template with Next.js and Prose UI. Free and open-source.',
-    url: 'https://prose-ui-docs-starter.vercel.app',
+    url: 'https://motionco.re',
   },
   icons: [
     {
@@ -52,16 +53,15 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="bg-color-base min-h-screen font-sans antialiased">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <>
-            <TopNav />
-            {children}
-          </>
+        <ThemeProvider attribute="class">
+          <DevModeProviders>
+            <div className="flex min-h-screen flex-col">
+              <TopNav />
+              <div className="flex flex-1">
+                {children}
+              </div>
+            </div>
+          </DevModeProviders>
         </ThemeProvider>
       </body>
     </html>
