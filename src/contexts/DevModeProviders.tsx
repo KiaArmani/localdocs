@@ -1,15 +1,16 @@
 'use client';
 
-import React from 'react';
 import { EditModeProvider } from '@/contexts/EditModeContext';
 import { SaveProvider } from '@/contexts/SaveContext';
 import { NavigationProvider } from "@/contexts/NavigationContext";
 
 export function DevModeProviders({ children }: { children: React.ReactNode }) {
+  // Use the simpler approach based on environment constants
+  // This works in React 19 because it's not using hooks conditionally
   if (process.env.NODE_ENV === 'development') {
     return (
       <EditModeProvider>
-        <NavigationProvider> {/* Order might matter based on dependencies */}
+        <NavigationProvider>
           <SaveProvider>
             {children}
           </SaveProvider>
@@ -17,6 +18,7 @@ export function DevModeProviders({ children }: { children: React.ReactNode }) {
       </EditModeProvider>
     );
   }
+  
   // In production, just return children without these providers
   return <>{children}</>;
 } 

@@ -1,37 +1,29 @@
 import { withContentCollections } from "@content-collections/next";
-// import { setupDevPlatform } from '@cloudflare/next-on-pages/next-dev'; // Remove import
 import type { Configuration } from 'webpack';
-import type { NextConfig } from 'next'; // Import NextConfig type
+import type { NextConfig } from 'next';
 
 /** @type {import('next').NextConfig} */
-const nextConfig: NextConfig = { // Explicitly type the config object
-  output: 'export',
-  // Remove webpackDevMiddleware
-  // webpackDevMiddleware: (config) => {
-  //   // Important: return the modified config
-  //   config.watchOptions = {
-  //     ignored: ['**/node_modules/**', '**/.next/**', '**/.content-collections/**'], // Added .content-collections
-  //     poll: 1000, // Check for changes every second
-  //   };
-  //   return config;
-  // },
+const nextConfig: NextConfig = {
+  // Only use export mode in production, not in development
+  ...(process.env.NODE_ENV === 'production' ? { output: 'export' } : {}),
   typescript: {
-    // !! WARN !!
-    // Dangerously allow production builds to successfully complete even if
-    // your project has type errors.
-    // Use this temporarily to bypass the persistent build error in generated types.
-    // TODO: Remove this once the underlying Next.js bug is fixed.
+    // Ignore TypeScript errors for React 19 compatibility
     ignoreBuildErrors: true,
   },
+  // Experimental flag for React 19 compatibility
+  experimental: {
+    // Add any experimental flags for React 19 compatibility
+    serverActions: {
+      bodySizeLimit: '2mb'
+    },
+  },
   webpack(config: Configuration, { dev, isServer }: { dev: boolean, isServer: boolean }) {
-    // Apply watchOptions only in development and for the client bundle
     if (dev && !isServer) {
       config.watchOptions = {
-        ignored: ['**/node_modules/**', '**/.next/**', '**/.content-collections/**'], // Keep .content-collections ignored
-        poll: 1000, // Optional: Check for changes every second
+        ignored: ['**/node_modules/**', '**/.next/**', '**/.content-collections/**'],
+        poll: 3000,
       };
     }
-    // Important: return the modified config
     return config;
   },
 };

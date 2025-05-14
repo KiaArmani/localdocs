@@ -61,7 +61,7 @@ export const NavigationProvider = ({ children }: NavigationProviderProps) => {
           throw new Error(`Failed to load navigation: ${response.statusText}`);
         }
         const data = await response.json();
-        setNavigation(data || []);
+        setNavigation(data.items || []);
       } catch (err: any) {
         console.error("NavigationContext Error loading data:", err);
         setError(err.message || "Error loading navigation data.");

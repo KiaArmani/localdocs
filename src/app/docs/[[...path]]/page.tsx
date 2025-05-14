@@ -16,6 +16,7 @@ import rehypePrettyCode from "rehype-pretty-code";
 import remarkGfm from "remark-gfm";
 import rehypeMermaid from "@/lib/rehype-mermaid.mjs"; // Import the new Rehype plugin
 import Mermaid from "@/components/mdx/Mermaid"; // Restore the real Mermaid import
+import type { Metadata } from 'next';
 
 // Dynamically import the editor component for development only
 // Note: React.lazy can only be used in Client Components or parent Server Components that use Suspense.
@@ -59,7 +60,11 @@ const MyTestAlert = (props: React.HTMLAttributes<HTMLDivElement>) => (
 
 // Original Alert (Orange/Warning)
 const WarningAlertProd = (props: React.PropsWithChildren<React.HTMLAttributes<HTMLDivElement>>) => (
-  <Alert variant="warning" {...props}>
+  <Alert 
+    variant="warning" 
+    className="mt-4 p-0 py-2 px-3 [&_[contenteditable=true]]:bg-transparent [&_[contenteditable=true]]:my-0"
+    {...props}
+  >
     <AlertCircle className="h-6 w-6" />
     {props.children}
   </Alert>
@@ -67,7 +72,11 @@ const WarningAlertProd = (props: React.PropsWithChildren<React.HTMLAttributes<HT
 
 // Important Alert (Red)
 const ImportantAlertProd = (props: React.PropsWithChildren<React.HTMLAttributes<HTMLDivElement>>) => (
-  <Alert variant="important" {...props}>
+  <Alert 
+    variant="important" 
+    className="mt-4 p-0 py-2 px-3 [&_[contenteditable=true]]:bg-transparent [&_[contenteditable=true]]:my-0"
+    {...props}
+  >
     <AlertTriangle className="h-6 w-6" />
     {props.children}
   </Alert>
@@ -75,22 +84,22 @@ const ImportantAlertProd = (props: React.PropsWithChildren<React.HTMLAttributes<
 
 // Info Alert (Blue)
 const InfoAlertProd = (props: React.PropsWithChildren<React.HTMLAttributes<HTMLDivElement>>) => (
-  <Alert variant="info" {...props}>
+  <Alert 
+    variant="info" 
+    className="mt-4 p-0 py-2 px-3 [&_[contenteditable=true]]:bg-transparent [&_[contenteditable=true]]:my-0"
+    {...props}
+  >
     <Info className="h-6 w-6" />
     {props.children}
   </Alert>
 );
 
-// Define a dummy placeholder component
-/* // Comment out placeholder
-const PlaceholderMermaid = ({ chart }: { chart: string }) => (
-  <pre>
-    <code>MERMAID_PLACEHOLDER: Chart content below (rehype-mermaid is currently disabled):
-      {chart}
-    </code>
-  </pre>
+// Styled version of AlertDescription with consistent styling
+const StyledAlertDescription = (props: React.PropsWithChildren<React.HTMLAttributes<HTMLDivElement>>) => (
+  <AlertDescription className="[&_p]:m-0" {...props}>
+    {props.children}
+  </AlertDescription>
 );
-*/
 
 // Combine standard Prose UI components with locally defined ones
 const finalMdxComponents = {
@@ -101,75 +110,85 @@ const finalMdxComponents = {
   Alert: WarningAlertProd,            
   ImportantAlert: ImportantAlertProd,  
   InfoAlert: InfoAlertProd,           
-  AlertDescription,                  
+  AlertDescription: StyledAlertDescription,                  
   AlertTitle,                        
   Mermaid, // Use the real Mermaid component
 };
 
 // 2. Page component (Server Component)
-export default async function Page({ params: initialParams }: { params: { path?: string[] } }) {
-  const resolvedParams = await initialParams;
-  const pagePathArray = resolvedParams?.path ?? [];
-  const lookupPath = pagePathArray.join('/') || 'index';
-  const page = allPages.find((p: ContentPage) => p._meta.path === lookupPath) as ContentPage | undefined;
+// Use a simpler approach for Next.js 15 compatibility
+export default function Page(props: {
+  params: { path?: string[] };
+}) {
+  // Extract paths from props
+  const { params } = props;
+  const pagePathArray = params?.path ?? [];
+  
+  // Async function to handle the actual data fetching and rendering
+  async function renderPage() {
+    const lookupPath = pagePathArray.join('/') || 'index';
+    const page = allPages.find((p: ContentPage) => p._meta.path === lookupPath) as ContentPage | undefined;
 
-  if (!page) {
-    notFound();
-  }
+    if (!page) {
+      notFound();
+    }
 
-  const initialRawMarkdown = page.rawContent;
-  const initialFrontmatter = (page.frontmatter || {}) as Record<string, string | string[] | number | boolean | Date | null>; // Type assertion
-  const initialTocSections = page.toc || [];
+    const initialRawMarkdown = page.rawContent;
+    const initialFrontmatter = (page.frontmatter || {}) as Record<string, string | string[] | number | boolean | Date | null>; // Type assertion
+    const initialTocSections = page.toc || [];
 
-  if (process.env.NODE_ENV === 'development') {
-    // In development, render the editable page (client component)
+    if (process.env.NODE_ENV === 'development') {
+      // In development, render the editable page (client component)
+      return (
+        <Suspense fallback={
+          <div className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
+              <p>Loading Editor...</p>
+          </div>
+        }>
+          <EditableDocPage
+            initialRawMarkdown={initialRawMarkdown}
+            initialFrontmatter={initialFrontmatter}
+            pagePathArray={pagePathArray}
+            initialTocSections={initialTocSections}
+            // We might need to pass mdxComponents here if EditableDocPage supports it
+          />
+        </Suspense>
+      );
+    }
+
+    // In production, render static content using MDXRemote
     return (
-      <Suspense fallback={
-        <div className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
-            <p>Loading Editor...</p>
+      <>
+        <article className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
+          <MDXRemote
+            source={initialRawMarkdown}
+            components={finalMdxComponents}
+            options={{
+              mdxOptions: {
+                // Use a properly typed approach for the remark plugins
+                remarkPlugins: [[remarkGfm]],
+                rehypePlugins: [
+                  rehypeSlug,
+                  [rehypeAutolinkHeadings, { behavior: "wrap" }],
+                  [rehypeExternalLinks, { target: '_blank', rel: ['noopener', 'noreferrer'] }], 
+                  rehypeMermaid, // Run Mermaid transformation FIRST
+                  [rehypePrettyCode, { theme: "slack-dark" }], // Then run pretty code on remaining blocks
+                ],
+                format: "mdx",
+              },
+            }}
+          /> 
+        </article>
+
+        <div className="sticky top-[var(--topnav-height)] hidden h-[calc(100vh-var(--topnav-height))] w-[var(--toc-width)] shrink-0 flex-col pt-[var(--article-padding-t)] lg:flex">
+          <Toc sections={initialTocSections} />
         </div>
-      }>
-        <EditableDocPage
-          initialRawMarkdown={initialRawMarkdown}
-          initialFrontmatter={initialFrontmatter}
-          pagePathArray={pagePathArray}
-          initialTocSections={initialTocSections}
-          // We might need to pass mdxComponents here if EditableDocPage supports it
-        />
-      </Suspense>
+      </>
     );
   }
 
-  // In production, render static content using MDXRemote (else block removed)
-  // const simpleTestMdx = "## Hello World\n\nThis is a simple test.\n\n```mermaid\ngraph TD\nA --> B\n```\n"; // Keep for later if needed
-
-  return (
-    <>
-      <article className="prose-ui relative mb-64 min-w-0 flex-1 px-[var(--article-padding-x)] md:px-[var(--article-padding-x-md)] lg:px-[var(--article-padding-x-lg)] xl:px-[var(--article-padding-x-xl)]">
-        <MDXRemote
-          source={initialRawMarkdown} // Restore actual markdown content
-          components={finalMdxComponents}
-          options={{
-            mdxOptions: {
-              remarkPlugins: [remarkGfm],
-              rehypePlugins: [
-                rehypeSlug,
-                [rehypeAutolinkHeadings, { behavior: "wrap" }],
-                [rehypeExternalLinks, { target: '_blank', rel: ['noopener', 'noreferrer'] }], 
-                rehypeMermaid, // Run Mermaid transformation FIRST
-                [rehypePrettyCode, { theme: "slack-dark" }], // Then run pretty code on remaining blocks
-              ],
-              format: "mdx",
-            },
-          }}
-        /> 
-      </article>
-
-      <div className="sticky top-[var(--topnav-height)] hidden h-[calc(100vh-var(--topnav-height))] w-[var(--toc-width)] shrink-0 flex-col pt-[var(--article-padding-t)] lg:flex">
-        <Toc sections={initialTocSections} />
-      </div>
-    </>
-  );
+  // Return the async component
+  return renderPage();
 }
 
 // 1. Implement generateStaticParams

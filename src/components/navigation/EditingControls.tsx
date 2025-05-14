@@ -75,6 +75,22 @@ export const EditingControls = () => {
   const [modalStep, setModalStep] = React.useState<'title' | 'location' | 'creating' | 'error'>('title');
   const router = useRouter(); // Keep if redirects/navigation are needed from here
 
+  React.useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isEditing && (event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault();
+        if (saveState !== 'saving' && saveState !== 'saved') {
+          triggerSave();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isEditing, saveState, triggerSave]); // Add dependencies
+
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewPageTitle(e.target.value);
     setCreateError(null);
