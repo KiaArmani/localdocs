@@ -1,0 +1,81 @@
+# Quick Start Guide
+
+This guide covers the essential steps to get started with Motion 2.0 Preview, using the pre-made character and gameplay components.
+
+## Setup
+
+1. **Add the Plugin to Your Project**
+   * Download the Release from Fab
+   * Copy the `MotionCore` folder to your project's `Plugins` directory
+   * Restart the Unreal Editor
+   * Enable the plugin in Edit → Plugins → Motion Core
+2. **Load the Default Map**
+   * Open the default demonstration map at `Plugins/MotionCore/Content/Motion/Maps/Default`
+
+## Using the Pre-made Character
+
+1. **Find the Demo Character**
+   * Locate `BP_MotionCharacter` in `Plugins/MotionCore/Content/Motion/Blueprints`
+   * Drag this into your level or set it as the default pawn in your GameMode
+2. **Play the Demo**
+   * Press Play to test the character with all movement components pre-configured
+   * Basic controls:
+     * WASD: Movement
+     * Space: Jump
+     * Shift: Sprint
+     * Ctrl: Crouch
+     * Mouse: Look
+
+## Exploring Pre-made Components
+
+The character includes several pre-configured components:
+
+* **Movement Components**:
+  * Sprint Component: Enables sprint functionality
+  * Crouch Component: Handles crouch transitions and state
+  * Jump Component: Enhanced jump mechanics
+  * Breathe Component: Adds camera breathing effects
+* **Feedback Components**:
+  * Movement Sound Component: Surface-aware footsteps and movement sounds
+  * Speed Sync Component: Synchronizes animation speed with movement
+
+## Testing the Gameplay Features
+
+1. **Try Different Surfaces**
+   * Walk across different materials to hear surface-specific footstep sounds
+   * Notice how the character reacts differently to various surfaces
+2. **Experiment with Movement Combinations**
+   * Try sprint-jumping and observe momentum preservation
+   * Test crouching while sprinting for a slide effect
+   * Notice breathing effects during exertion
+3. **Check Out the Animation Integration**
+   * Observe how animations blend smoothly between states
+   * Notice the tag-driven animation state transitions
+
+## Next Steps
+
+1. **Create Your Own Character**
+   * Create a new Blueprint inheriting from `MotionCharacter` or `Character`
+   * Add the desired Motion components to your character
+   * Configure component settings to suit your gameplay style
+2. **Customize Movement Feel**
+   * Adjust component properties to create your desired movement feel
+   * Experiment with different values for sprint speed, jump height, etc.
+3. **Explore Advanced Features**
+   * Try modifying the Gameplay Ability integration
+   * Customize the animation tag mappings
+   * Create new movement sound profiles
+4. **Test Replication Support**
+   * Use Play as Client option (Play > Advanced Settings > Number of Players: 2)
+   * Observe how movement states replicate across clients
+   * Test network movement prediction with different latency settings
+5. **Create New Gameplay Abilities**
+   * Design custom abilities using the Gameplay Ability System
+   * Create new Gameplay Effects that modify character attributes
+   * Implement input bindings for your custom abilities
+
+For more detailed information, explore the component-specific documentation pages.
+
+1. Test
+2. Salat
+    1. k

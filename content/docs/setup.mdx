@@ -1,160 +1,163 @@
 # Motion Core Setup Guide (Blueprint Focus)
 
+<InfoAlert>
+  <AlertDescription>
+    This guide below is mostly for creating a custom character from scratch in case you do not want to use the sample character blueprint that ships with Motion.
+  </AlertDescription>
+</InfoAlert>
+
 This guide explains how to set up the Motion Core plugin in your Unreal Engine project using primarily Blueprints, leveraging the component-based and Gameplay Ability System (GAS) integrated architecture.
 
 ## 1. Prerequisites
 
 Before starting, ensure the following plugins are enabled in your project (Edit -> Plugins):
 
-*   **Enhanced Input:** For handling user input actions.
-*   **Gameplay Abilities:** For character abilities, state management, and attribute handling.
+* **Enhanced Input:** For handling input actions.
+* **Gameplay Abilities:** For character abilities, state management, and attribute handling.
 
 ## 2. Installation
 
-1.  Install the Motion Core plugin either through the Epic Games Launcher (to the engine) or by placing the `MotionCore` folder into your project's `Plugins` directory.
-2.  Restart the Unreal Editor if it was open.
-3.  Verify the plugin is enabled in Edit -> Plugins -> Project -> Motion.
+1. Install the Motion Core plugin by placing the `MotionCore` folder into your project's `Plugins` directory.
+2. Restart the Unreal Editor if it was open.
+3. Verify the plugin is enabled in Edit -> Plugins -> Motion.
 
 ## 3. Character Blueprint Setup
 
-The recommended approach is to add Motion Core components to your existing Character Blueprint (which should typically inherit from the standard `ACharacter`). The C++ classes `AMotionCharacter`, `UMotionInputComponent`, `UMotionAbilitySystemComponent`, and `AMotionPlayerController` have been removed; use the provided `B_MotionCharacter` Blueprint as an example reference.
+The recommended approach is to add Motion Core components to your existing Character Blueprint (which should typically inherit from the standard `ACharacter`).&#x20;
+
+The C++ classes `AMotionCharacter`, `UMotionInputComponent`, `UMotionAbilitySystemComponent`, and `AMotionPlayerController` have been removed; use the provided `B_MotionCharacter` Blueprint as an example reference.
 
 **3.1. Required Engine Components:**
 
 Ensure your Character Blueprint has the standard required components:
 
-*   **Capsule Component:** (Default)
-*   **Mesh (Skeletal Mesh Component):** (Default)
-*   **Character Movement Component:** (Default)
-*   **Ability System Component (ASC):**
-    *   Click "Add Component" in your Character Blueprint.
-    *   Search for and add the `Ability System` component.
-    *   Select the added ASC. In the Details panel, under Replication, set **Replication Mode** to `Mixed` or `Full` if making a multiplayer game.
-*   **Attribute Set:**
-    *   **Option A (Recommended Start):** Use the provided `UMotionAttributeSet`. This set already includes `MaxWalkSpeed`. In your Character Blueprint's `Begin Play` event (or after `Init Ability Actor Info`), call `Add Attribute Set To Actor` (from `Motion Ability System Helper`) and select `MotionAttributeSet` as the class.
-    *   **Option B (Custom):** Create your own Blueprint or C++ AttributeSet inheriting from `UAttributeSet`. Add attributes like `MaxWalkSpeed`, `Stamina`, etc. Ensure you include a speed attribute. Add this set using `Add Attribute Set To Actor`.
-    *   **Attribute Synchronization:** To link the `MaxWalkSpeed` attribute to the Character Movement Component, add the `MotionSpeedSyncComponent` to your Character Blueprint using "Add Component". This component automatically finds the `UMotionAttributeSet` and `UCharacterMovementComponent` and keeps `CMC->MaxWalkSpeed` updated based on the attribute value. (If using a custom AttributeSet, you'll need to either inherit the sync logic or create your own synchronization mechanism, e.g., using `GetGameplayAttributeValueChangeDelegate`).
+* **Capsule Component:** (Default)
+* **Mesh (Skeletal Mesh Component):** (Default)
+* **Character Movement Component:** (Default)
+* **Ability System Component (ASC):**
+  * Click "Add Component" in your Character Blueprint.
+  * Search for and add the `Ability System` component.
+  * Select the added ASC. In the Details panel, under Replication, set **Replication Mode** to `Mixed` or `Full` if making a multiplayer game.
+  * *(For recommended PlayerState hosting, see section 3.4 below).*
+* **Attribute Set:**
+  * **Option A (Recommended Start - UMotionAttributeSet):** `UMotionAttributeSet` is provided and includes `MaxWalkSpeed`.
+    * **C++ (Highly Recommended for PlayerState):** If you have a C++ `PlayerState` (see 3.4), add `UMotionAttributeSet` as a Default Subobject (DSO) in its constructor. This is the most robust method.
+      ```cpp
+      // In YourPlayerState.h
+      // UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
+      // TObjectPtr<UMotionAttributeSet> MotionAttributeSet;
 
+      // In YourPlayerState.cpp constructor
+      // MotionAttributeSet = CreateDefaultSubobject<UMotionAttributeSet>(TEXT("MotionAttributeSet"));
+      ```
+    * **Blueprint (Runtime Add):** If using a Blueprint-only Character/PlayerState, in `Begin Play` (or after `Init Ability Actor Info`), call `Add Attribute Set To Actor` (from `Motion Ability System Helper`) and select `UMotionAttributeSet`. Be aware of potential replication timing issues with runtime additions.
+  * **Option B (Custom AttributeSet):** Create your own Blueprint or C++ AttributeSet inheriting from `UAttributeSet`. Add attributes like `MaxWalkSpeed`, `Stamina`, etc. Ensure you include a speed attribute.
+    * **C++ DSO (Recommended):** Add it as a Default Subobject in your C++ `PlayerState` or `Character` constructor.
+    * **Blueprint (Runtime Add):** Use `Add Attribute Set To Actor` with the same caveats as above.
+  * **Attribute Synchronization:** To link the `MaxWalkSpeed` attribute to the Character Movement Component, add the `MotionSpeedSyncComponent` to your Character Blueprint. This component automatically finds the `UMotionAttributeSet` (or your specified attribute if customized) and `UCharacterMovementComponent` and keeps `CMC->MaxWalkSpeed` updated.
+  * **Attribute Initialization:** For initial values:
+    * **Constructor (C++):** Set defaults directly in your AttributeSet C++ constructor.
+    * **`DefaultStartingData` (ASC):** Use the `DefaultStartingData` array on the AbilitySystemComponent for a Blueprint-friendly way to apply GameplayEffects that can initialize attributes at startup.
+    * **`AttributeSetInitter` (Advanced):** For complex data-driven initialization (e.g., from CurveTables), you might explore patterns similar to Lyra's `AttributeSetInitter` (requires C++).
 
 **3.2. Add Motion Core Components:**
 
 Add the desired Motion Core C++ components using the "Add Component" button in your Character Blueprint:
 
-*   `MotionCrouchComponent` (Handles smooth capsule resizing based on Gameplay Tags)
-*   `MotionSprintComponent`
-*   `MotionJumpComponent`
-*   `MotionMovementSoundComponent` (Handles Movement FX via Gameplay Cues)
-*   `MotionCameraComponent` (Optional: If using procedural camera effects. Alternatively, use standard Spring Arm + Camera components).
-*   `MotionBreatheComponent` (Optional: Requires `MotionCameraComponent`).
-*   `MotionSpeedSyncComponent` (Recommended: If using `UMotionAttributeSet` for speed).
+* `MotionCrouchComponent` (Handles smooth capsule resizing based on Gameplay Tags)
+* `MotionSprintComponent`
+* `MotionJumpComponent`
+* `MotionMovementSoundComponent` (Handles Movement FX via Gameplay Cues)
+* `MotionCameraComponent` (Optional: If using procedural camera effects. Alternatively, use standard Spring Arm + Camera components).
+* `MotionBreatheComponent` (Optional: Requires `MotionCameraComponent`).
+* `MotionSpeedSyncComponent` (Recommended: If using `UMotionAttributeSet` for speed).
 
 **3.3. Configure Components:**
 
 Select your Character Blueprint, then select each added Motion Core component in the Components tab and configure its properties in the Details panel:
 
-*   **`MotionCrouchComponent`:** Set `Target Crouch Half Height` (the final height when crouched). Set `Crouch Interpolation Speed` (how fast the capsule resizes). Configure `Crouch Camera Offset` curve if desired.
-*   **`MotionMovementSoundComponent`:** Assign your **Surface Effects Table** (see Step 7). Set `Generic Footstep Cue Tag` if different from default (`Motion.GameplayCue.Movement.FootstepFX`). Set `Footstep Socket L`/`R` names. Adjust `Surface Trace Channel`/`Distance`. Configure throttling properties (`Min Time Between Footsteps`, `Min Time Between Landings`). Configure environmental check properties (`Environment Check Radius`, `Channel`, `Wet Environment Actor Tag`) if desired.
-*   **`MotionCameraComponent`:** Configure `Camera Location Curves`, `Camera Rotation Curves`, `Camera Target Offset By Pitch`, View Limits, `Camera Socket Name`, etc.
-*   **`MotionBreatheComponent`:** Configure `Camera Breathing Curve`, `Breathing Curve Identifier`, `Idle Velocity Threshold`.
-*   **Other Components:** Configure `bShowDebugInformation` or other properties as needed.
-
-**3.4. Initialize Ability System Component:**
-
-Ensure the ASC is properly initialized for networking:
-
-*   In your Character Blueprint's Event Graph:
-    *   Implement `Event Possessed` (runs on Server): This is the crucial step for initialization. Get the Ability System Component -> Call `Initialize Ability Actor Info` (from MotionAbilitySystemHelper). Set the `Owner Actor` pin to `Get Player State` and the `Avatar Actor` pin to `Self`. Grant any server-side Abilities or apply initial Gameplay Effects here (See Step 4).
+* **`MotionCrouchComponent`:**&#x20;
+  * Set `Target Crouch Half Height` (the final height when crouched).&#x20;
+  * Set `Crouch Interpolation Speed` (how fast the capsule resizes).&#x20;
+  * Configure `Crouch Camera Offset` curve if desired.
+* **`MotionMovementSoundComponent`:**&#x20;
+  * Assign your **Surface Effects Table** (see Step 7).
+  * Set `Generic Footstep Cue Tag` if different from default (`Motion.GameplayCue.Movement.FootstepFX`).&#x20;
+  * Set `Footstep Socket L`/`R` names. Adjust `Surface Trace Channel`/`Distance`.&#x20;
+  * Configure throttling properties (`Min Time Between Footsteps`, `Min Time Between Landings`).&#x20;
+  * Configure environmental check properties (`Environment Check Radius`, `Channel`, `Wet Environment Actor Tag`) if desired.
+* **`MotionCameraComponent`:**&#x20;
+  * Configure `Camera Location Curves`, `Camera Rotation Curves`, `Camera Target Offset By Pitch`, View Limits, `Camera Socket Name`, etc.
+* **`MotionBreatheComponent`:**&#x20;
+  * Configure `Camera Breathing Curve`, `Breathing Curve Identifier`, `Idle Velocity Threshold`.
+* **Other Components:**&#x20;
+  * Configure `bShowDebugInformation` or other properties as needed.
 
 ## 4. Gameplay Ability Setup (GAS Assets)
 
 Motion Core relies on GAS assets you create or modify.
 
-1.  **Create Abilities:** Right-click in Content Browser -> Blueprints -> Gameplay Ability Blueprint. Create abilities for Crouch, Sprint, Jump, etc. Use examples provided with the plugin as a guide.
-2.  **Ability Logic (Example: Crouch Ability - Toggle or Hold):**
-    *   Open your Crouch Ability Blueprint.
-    *   **Activation:** Trigger the ability using a Gameplay Event (e.g., `Event.Input.Crouch.Pressed`) as described in Step 5.3. For Hold actions, this event is sent on both press and release.
-    *   **Logic (`Event ActivateAbility`):**
-        *   Use `Switch Has Authority`.
-        *   **Server Path:**
-            *   Get references: Avatar Actor -> `MotionCrouchComponent` (Promote: `CrouchComp`), Avatar Actor -> `AbilitySystemComponent` (Promote: `ASC`).
-            *   Branch: Use **`Has Matching Gameplay Tag`** on `ASC` checking for `State.Movement.Crouching`.
-                *   **If True (Input Released or Toggle Off):** Call `CrouchComp->CanUncrouch()`. Branch:
-                    *   If TRUE: Remove `State.Movement.Crouching` tag from `ASC`. **Remove Crouch Speed Gameplay Effect** (using the handle returned when it was applied, or by class). End Ability.
-                    *   If FALSE: **Do NOT remove the tag.** Implement retry logic if desired (see Handling Blocked Uncrouch). End Ability.
-                *   **If False (Input Pressed or Toggle On):** Add `State.Movement.Crouching` tag to `ASC`. **Apply Crouch Speed Gameplay Effect** (e.g., `GE_Movement_CrouchSpeed`). Store the returned `FActiveGameplayEffectHandle` if you need to remove it specifically later. **If it's a Toggle ability, End Ability here. If it's a Hold ability, do NOT End Ability here.** (The ability remains active until the release input triggers it again).
-    *   **Handling Blocked Uncrouch:** If `CanUncrouch` returns false when trying to uncrouch, the `State.Movement.Crouching` tag remains. The **Gameplay Ability** is responsible for retrying. Common approaches:
-        *   **Timer:** In the logic path where uncrouch fails, start a short, looping timer. On tick, re-check `CanUncrouch`. If true, remove tag/effect and stop timer/end ability properly.
-        *   **Movement Event:** Listen for a custom Gameplay Event sent by the Character on movement. Re-check `CanUncrouch` when received.
-        *   *This guide doesn't detail the implementation of these retry mechanisms.*
-3.  **Create Effects:** Right-click in Content Browser -> Blueprints -> Gameplay Effect Blueprint. Create effects like `GE_Movement_CrouchSpeed`, `GE_Movement_SprintSpeed`.
-    *   Set Duration Policy to `Infinite` for persistent state effects (like crouch/sprint speed modifiers) or a specific duration for temporary buffs.
-    *   Add a Modifier targeting your speed attribute (e.g., `YourAttributeSet.MaxWalkSpeed`) with the desired operation (`Add (Final)` is recommended for temporary additive bonuses) and magnitude.
-    *   **For Gradual Effects (e.g., Sprint Ramp-up/down):** Use `Infinite` duration, `Period = 0.0`, `Add (Final)` modifier, and **`Set By Caller`** magnitude. The Gameplay Ability will need a Timer to periodically update the magnitude on the active effect handle.
-4.  **Grant Abilities/Effects:** In your Character Blueprint (e.g., on `Event Possessed` for server-granted, or `BeginPlay`), get the ASC and use `Give Ability` and `Apply Gameplay Effect To Self` to grant the default abilities and any passive effects needed.
-    *   **Important (Set By Caller):** When applying a GE spec that uses Set By Caller magnitude, you **must** initialize the magnitude value (e.g., to 0.0) using `Set Set By Caller Magnitude` (Blueprint `Make...Spec` node) or `SpecHandle.Data->SetSetByCallerMagnitude(...)` (C++) before applying the spec to avoid runtime errors.
+1. **Create Abilities:** Right-click in Content Browser -> Blueprints -> Gameplay Ability Blueprint. Create abilities for Crouch, Sprint, Jump, etc. Use examples provided with the plugin as a guide.
+2. **Create Effects:** Right-click in Content Browser -> Blueprints -> Gameplay Effect Blueprint. Create effects like `GE_Movement_CrouchSpeed`, `GE_Movement_SprintSpeed`.
+   * Set Duration Policy to `Infinite` for persistent state effects (like crouch/sprint speed modifiers) or a specific duration for temporary buffs.
+   * Add a Modifier targeting your speed attribute (e.g., `YourAttributeSet.MaxWalkSpeed`) with the desired operation (`Add (Final)` is recommended for temporary additive bonuses) and magnitude.
+   * **For Gradual Effects (e.g., Sprint Ramp-up/down):** Use `Infinite` duration, `Period = 0.0`, `Add (Final)` modifier, and **`Set By Caller`** magnitude. The Gameplay Ability will need a Timer to periodically update the magnitude on the active effect handle.
+3. **Grant Abilities/Effects:** In your Character Blueprint (e.g., on `Event Possessed` for server-granted, or `BeginPlay`), get the ASC and use `Give Ability` and `Apply Gameplay Effect To Self` to grant the default abilities and any passive effects needed.
+   * **Important (Set By Caller):** When applying a GE spec that uses Set By Caller magnitude, you **must** initialize the magnitude value (e.g., to 0.0) using `Set Set By Caller Magnitude` (Blueprint `Make...Spec` node) or `SpecHandle.Data->SetSetByCallerMagnitude(...)` (C++) before applying the spec to avoid runtime errors.
 
 ## 5. Input Setup (Enhanced Input)
 
-1.  **Create/Use Assets:** Ensure you have:
-    *   `UInputAction` assets (Right-click -> Input -> Input Action). Create actions for Move, Look, Crouch, Sprint, Jump, etc.
-    *   `UInputMappingContext` asset (Right-click -> Input -> Input Mapping Context). Map physical keys/buttons to your Input Actions within this context.
-2.  **Add Mapping Context:** In your Player Controller Blueprint (`Event BeginPlay`) or Character Blueprint (`Event BeginPlay` or `Event Possessed`), **ensure this logic only runs for the locally controlled player**. Use a Branch node checking **`Is Local Player Controller`** (if in Player Controller BP) or **`Is Locally Controlled`** (if in Character BP). If true, then: Get Player Controller -> Get Enhanced Input Local Player Subsystem -> Add Mapping Context (select your IMC asset). This works correctly in both singleplayer and multiplayer.
-3.  **Bind Actions:** In your Character Blueprint's Event Graph, implement the `Setup Player Input Component` event (this event only runs on the locally controlled character):
-    *   Get the `Player Input Component` input pin -> Cast to `Enhanced Input Component`.
-    *   **Bind Movement/Look:** Drag off the cast node -> `Bind Action`. Select your `IA_Move`/`IA_Look` assets. Connect `Triggered` to your movement/look handling logic (e.g., calling `Add Movement Input`, `Add Controller Yaw/Pitch Input`).
-    *   **Bind Ability Actions (Recommended: Hybrid Approach):**
-        *   **Define Input IDs:** Create or use the `EMotionAbilityInputID` C++ enum (`Plugins/MotionCore/Source/MotionCore/Public/AbilitySystem/MotionAbilityInputID.h`) to define logical inputs (Sprint, Jump, Crouch, etc.).
-        *   **Define Gameplay Event Tags:** Create tags for ability activation triggers (e.g., `Input.Ability.Sprint`, `Input.Ability.Jump`). Add in Project Settings -> Project -> Gameplay Tags.
-        *   **Grant Abilities (Server):** On `Event Possessed` (Server side), use `Give Ability`. In the `Make GameplayAbilitySpec` node, set the **`Input ID`** pin using your `EMotionAbilityInputID` enum value (e.g., `Sprint`). This links the ability instance to the logical input for release tasks like `Wait Input Release`.
-        *   **Configure Ability Triggers (GA Asset):** In each Gameplay Ability asset (e.g., `GA_Motion_Sprint`), set the **Ability Trigger** (Class Defaults) to use **`Gameplay Event`** as the `Trigger Source` and the corresponding activation tag (e.g., `Input.Ability.Sprint`) as the `Trigger Tag`.
-        *   **Bind Input (Client):** On `Event Possessed` (Client side, check `Is Locally Controlled`):
-            1.  Get the ASC and Enhanced Input Component (use `Get Enhanced Input Component From Actor` helper).
-            2.  Call **`Bind Enhanced Input Action to ASC`** (from `Motion Ability System Helper`) for each ability input. Provide the ASC, Input Component, the `UInputAction` asset, and the corresponding `EMotionAbilityInputID` enum value. This handles calling `AbilityLocalInputPressed/Released` to track the input state for the ASC.
-            3.  Use the standard **`Bind Action`** node for each ability input `UInputAction`. Connect the **`Started`** pin to **`Send Gameplay Event to Actor`**, targeting `Self` and using the activation Gameplay Event Tag (e.g., `Input.Ability.Sprint`). This triggers the ability's activation.
-            4.  *(Optional Workaround)* If `Wait Input Release` proves unreliable, connect the **`Completed`** pin of the `Bind Action` node to the **`Trigger Ability Input Released`** helper function, providing the ASC and the correct `EMotionAbilityInputID`.
+* **Create/Use Assets:** Ensure you have:
+  * `UInputAction` assets (Right-click -> Input -> Input Action). Motion ships with actions for Move, Look, Crouch, Sprint, Jump, etc.
+  * `UInputMappingContext` asset (Right-click -> Input -> Input Mapping Context). Map physical keys/buttons to your Input Actions within this context. Motion ships with a sample configuration.
+* **Add Mapping Context:**&#x20;
+  * In your Player Controller Blueprint (`Event BeginPlay`) or Character Blueprint (`Event BeginPlay` or `Event Possessed`), **ensure this logic only runs for the locally controlled player**.&#x20;
+  * Use a Branch node checking **`Is Local Player Controller`** (if in Player Controller BP) or **`Is Locally Controlled`** (if in Character BP).&#x20;
+  * If true, then: Get Player Controller -> Get Enhanced Input Local Player Subsystem -> Add Mapping Context (select your IMC asset). This works correctly in both singleplayer and multiplayer.
+* **Bind Actions:** In your Character Blueprint's Event Graph, implement the `Setup Player Input Component` event (this event only runs on the locally controlled character):
+  * Get the `Player Input Component` input pin -> Cast to `Enhanced Input Component`.
+  * **Bind Movement/Look:**&#x20;
+    * Drag off the cast node -> `Bind Action`.&#x20;
+    * Select your `IA_Move`/`IA_Look` assets.&#x20;
+    * Connect `Triggered` to your movement/look handling logic (e.g., calling `Add Movement Input`, `Add Controller Yaw/Pitch Input`).
+  * **Bind Ability Actions (Recommended: Hybrid Approach):**
+    * **Define Input IDs:** Create or use the `EMotionAbilityInputID` C++ enum (`Plugins/MotionCore/Source/MotionCore/Public/AbilitySystem/MotionAbilityInputID.h`) to define logical inputs (Sprint, Jump, Crouch, etc.).
+    * **Define Gameplay Event Tags:** Create tags for ability activation triggers (e.g., `Input.Ability.Sprint`, `Input.Ability.Jump`). Add in Project Settings -> Project -> Gameplay Tags.
+    * **Grant Abilities (Server):** On `Event Possessed` (Server side), use `Give Ability`. In the `Make GameplayAbilitySpec` node, set the **`Input ID`** pin using your `EMotionAbilityInputID` enum value (e.g., `Sprint`). This links the ability instance to the logical input for release tasks like `Wait Input Release`.
+    * **Configure Ability Triggers (GA Asset):** In each Gameplay Ability asset (e.g., `GA_Motion_Sprint`), set the **Ability Trigger** (Class Defaults) to use **`Gameplay Event`** as the `Trigger Source` and the corresponding activation tag (e.g., `Input.Ability.Sprint`) as the `Trigger Tag`.
+    * **Bind Input (Client):** On `Event Possessed` (Client side, check `Is Locally Controlled`):
+      * Get the ASC and Enhanced Input Component (use `Get Enhanced Input Component From Actor` helper).
+      * Call **`Bind Enhanced Input Action to ASC`** (from `Motion Ability System Helper`) for each ability input. Provide the ASC, Input Component, the `UInputAction` asset, and the corresponding `EMotionAbilityInputID` enum value. This handles calling `AbilityLocalInputPressed/Released` to track the input state for the ASC.
+      * Use the standard **`Bind Action`** node for each ability input `UInputAction`. Connect the **`Started`** pin to **`Send Gameplay Event to Actor`**, targeting `Self` and using the activation Gameplay Event Tag (e.g., `Input.Ability.Sprint`). This triggers the ability's activation.
+      * *(Workaround for UE5.5)* If `Wait Input Release` proves unreliable, connect the **`Completed`** pin of the `Bind Action` node to the **`Trigger Ability Input Released`** helper function, providing the ASC and the correct `EMotionAbilityInputID`.
 
 ## 6. Animation Setup
 
-1.  **Create AnimBP:** Create an Animation Blueprint inheriting from `MotionAnimInstance` (or your own child class of it) for your character's Skeletal Mesh.
-2.  **Get Variables in AnimBP:** In the AnimBP's Event Graph (`Event Blueprint Initialize Animation`): Get Owning Actor -> Cast to your Character BP. Get Character Movement Component -> Promote to variable (`CMC`). *(Note: The C++ base class `MotionAnimInstance` already attempts to get the ASC here, but it might be too early).*
-3.  **Initialize AnimBP from Character:** In your **Character Blueprint**, after you have confirmed the Ability System Component is valid and initialized (e.g., in `Event Possessed` after calling `Initialize Ability Actor Info`, and potentially also after client-side initialization if needed):
-    *   Get your Mesh component -> Get Anim Instance -> Cast to your `MotionAnimInstance` child class.
-    *   If the cast is valid: Get your Ability System Component reference -> Call the `Initialize With Ability System` function on the casted Anim Instance node. This ensures the Anim Instance connects to the ASC once it's ready.
-4.  **Link Anim Layers (Optional):** If you need to link Anim Layers dynamically (e.g., based on equipment), do this in your Character BP's `BeginPlay` or `Event Possessed`. **Ensure this logic only runs for the locally controlled player** using a Branch node checking **`Is Locally Controlled`**. If true, get the Mesh component and call `Link Anim Class Layers`.
-5.  **Update Variables in AnimBP:** In `Event Blueprint Update Animation`: Use the `Gameplay Tag Property Map` feature (configured in the AnimBP Class Defaults) which automatically updates linked boolean variables based on tags in the ASC (if `InitializeWithAbilitySystem` was successful). Get the `CMC` variable -> Get Velocity, Is Falling, etc., and set corresponding AnimBP variables. You can also manually check tags using **`Has Matching Gameplay Tag`** if needed, but the property map is often cleaner.
-6.  **State Machine:** Use the boolean state variables (e.g., `bIsSprinting`, `bIsCrouching`, `bIsJumping`, updated by the Gameplay Tag Property Map or manually) and other variables like Speed in your AnimGraph State Machine transitions and to select animations (Blend Spaces, Sequences).
-7.  **Anim Notifies:** In walk/run/sprint animations, add Anim Notifies at footstep keyframes. In the AnimBP's Event Graph, implement the corresponding `AnimNotify_Footstep_L`/`_R` events. Get Owning Actor -> Get Component By Class (`MotionMovementSoundComponent`) -> Call `Trigger Footstep Effect`, passing the appropriate foot Gameplay Tag (e.g., `Motion.Movement.Sound.Foot.Left`).
+* **Create AnimBP:** Create an Animation Blueprint inheriting from `MotionAnimInstance` (or your own child class of it) for your character's Skeletal Mesh.
+* **Get Variables in AnimBP:** In the AnimBP's Event Graph (`Event Blueprint Initialize Animation`):&#x20;
+  1. Get Owning Actor -> Cast to your Character BP. Get Character Movement Component -> Promote to variable (`CMC`). *(Note: The C++ base class `MotionAnimInstance` already attempts to get the ASC here, but it might be too early).*
+* **Initialize AnimBP from Character:** In your **Character Blueprint**, after you have confirmed the Ability System Component is valid and initialized (e.g., in `Event Possessed` after calling `Initialize Ability Actor Info`, and potentially also after client-side initialization if needed):
+  * Get your Mesh component -> Get Anim Instance -> Cast to your `MotionAnimInstance` child class.
+  * If the cast is valid: Get your Ability System Component reference -> Call the `Initialize With Ability System` function on the casted Anim Instance node. This ensures the Anim Instance connects to the ASC once it's ready.
+* **Link Anim Layers (Optional):** If you need to link Anim Layers dynamically (e.g., based on equipment), do this in your Character BP's `BeginPlay` or `Event Possessed`. **Ensure this logic only runs for the locally controlled player** using a Branch node checking **`Is Locally Controlled`**. If true, get the Mesh component and call `Link Anim Class Layers`.
+* **Update Variables in AnimBP:** In `Event Blueprint Update Animation`: Use the `Gameplay Tag Property Map` feature (configured in the AnimBP Class Defaults) which automatically updates linked boolean variables based on tags in the ASC (if `InitializeWithAbilitySystem` was successful). Get the `CMC` variable -> Get Velocity, Is Falling, etc., and set corresponding AnimBP variables. You can also manually check tags using **`Has Matching Gameplay Tag`** if needed, but the property map is often cleaner.
+* **State Machine:** Use the boolean state variables (e.g., `bIsSprinting`, `bIsCrouching`, `bIsJumping`, updated by the Gameplay Tag Property Map) and other variables like Speed in your AnimGraph State Machine transitions and to select animations (Blend Spaces, Sequences).
+* **Anim Notifies:**&#x20;
+  * In walk/run/sprint animations, add Anim Notifies at footstep keyframes.&#x20;
+  * In the AnimBP's Event Graph, implement the corresponding `AnimNotify_Footstep_L`/`_R` events.&#x20;
+  * Get Owning Actor -> Get Component By Class (`MotionMovementSoundComponent`) -> Call `Trigger Footstep Effect`, passing the appropriate foot Gameplay Tag (e.g., `Motion.Movement.Sound.Foot.Left`).
 
 ## 7. Movement FX Setup (Replaces Movement Sound Setup)
 
-1.  **Define Tags:** Ensure the necessary Gameplay Tags are defined in your project (Project Settings -> Gameplay Tags). You'll need tags for:
-    *   Movement Types (e.g., `Motion.Movement.Sound.Type.Walk`, `Motion.Movement.Sound.Type.Sprint`, `Motion.Movement.Sound.Type.Land.Light`, `Motion.Movement.Sound.Type.Land.Hard`)
-    *   Foot Types (e.g., `Motion.Movement.Sound.Foot.Left`, `Motion.Movement.Sound.Foot.Right`)
-    *   Character Weight (e.g., `Motion.Character.Weight.Light`, `Motion.Character.Weight.Medium`, `Motion.Character.Weight.Heavy`)
-    *   Effect Profiles (e.g., `Motion.Character.EffectProfile.Stealth`, `.Normal`, `.Heavy`) - Optional, if using profiles.
-    *   Environmental Context (e.g., `Motion.Environment.State.Wet`, `Motion.Environment.Location.Indoor`) - Optional, if using environmental detection.
-    *   The generic Cue Tag (e.g., `Motion.GameplayCue.Movement.FootstepFX`)
-    *   Relevant Character States (e.g., `Motion.State.Movement.Sprinting`, `Motion.State.Movement.Crouching`)
+* **Define Tags:** Ensure the necessary Gameplay Tags are defined in your project (Project Settings -> Gameplay Tags). You'll need tags for:
+  * Movement Types (e.g., `Motion.Movement.Sound.Type.Walk`, `Motion.Movement.Sound.Type.Sprint`, `Motion.Movement.Sound.Type.Land.Light`, `Motion.Movement.Sound.Type.Land.Hard`)
+  * Foot Types (e.g., `Motion.Movement.Sound.Foot.Left`, `Motion.Movement.Sound.Foot.Right`)
+  * Character Weight (e.g., `Motion.Character.Weight.Light`, `Motion.Character.Weight.Medium`, `Motion.Character.Weight.Heavy`)
+  * Effect Profiles (e.g., `Motion.Character.EffectProfile.Stealth`, `.Normal`, `.Heavy`) - Optional, if using profiles.
+  * Environmental Context (e.g., `Motion.Environment.State.Wet`, `Motion.Environment.Location.Indoor`) - Optional, if using environmental detection.
+  * The generic Cue Tag (e.g., `Motion.GameplayCue.Movement.FootstepFX`)
+  * Relevant Character States (e.g., `Motion.State.Movement.Sprinting`, `Motion.State.Movement.Crouching`)
     *(Refer to `MotionGameplayTags.h` for the tags defined natively by the plugin).*
-2.  **Create DataTable:** Create a **DataTable** asset (Miscellaneous -> Data Table). Choose `FSurfaceEffectAssets` as the row structure.
-3.  **Populate DataTable:** Add rows, using the `EPhysicalSurface` enum name as the Row Name (e.g., `SurfaceType1`, `SurfaceType2`, `Default`). For each row (surface type):
-    *   Fill the `WalkSounds`, `RunSounds`, `CrouchSounds`, `LandLightSounds`, `LandHardSounds` arrays (`FWeightBasedSoundVariations`) with `TSoftObjectPtr` references to your desired `USoundBase` assets (Sound Cues recommended for variation/modulation). Populate the `LightWeightSounds`, `MediumWeightSounds`, `HeavyWeightSounds` arrays within each category.
-    *   Assign `TSoftObjectPtr` references to your `DecalMaterial` and `ParticleSystem` assets. Configure `DecalSize` and `DecalLifetime`.
-4.  **Add & Configure Component:** Add the `UMotionMovementSoundComponent` to your Character Blueprint. In the Details panel:
-    *   Assign your created DataTable asset to the `Surface Effects Table` property.
-    *   Verify the `Generic Footstep Cue Tag` property matches the tag you will use for your Gameplay Cue Blueprint (defaults to `Motion.GameplayCue.Movement.FootstepFX`).
-    *   Configure `Footstep Socket L`/`R`, `Surface Trace Channel`/`Distance`.
-    *   Configure throttling properties (`Min Time Between Footsteps`, `Min Time Between Landings`).
-    *   Configure environmental check properties (`Environment Check Radius`, `Channel`, `Wet Environment Actor Tag`) if desired.
-5.  **Create Gameplay Cue Blueprint:**
-    *   Create a new Blueprint class inheriting from **`UMotionGameplayCueNotify_Static`**. Name it descriptively (e.g., `GC_Movement_FootstepFX`).
-    *   Open the Blueprint. In Class Defaults, set the `Gameplay Cue Tag` property to match the tag configured on the component (e.g., `Motion.GameplayCue.Movement.FootstepFX`).
-    *   **Crucially, set Replication Policy to `Do Not Replicate`**.
-    *   *(Optional)* Override the `HandleMovementFX` function if you need to add custom logic beyond the base C++ implementation (which handles context parsing, asset lookup, and spawning). You can call the parent function (`Parent: Handle Movement FX`) to retain the base functionality.
-6.  **Ensure Character Tags:** Make sure your character's ASC has the appropriate `Motion.Character.Weight.*` and `Motion.Character.EffectProfile.*` tags applied (e.g., via startup Gameplay Effects).
-7.  **Update Anim Notifies:** Ensure `TriggerFootstepEffect` is called from Anim Notifies (see Animation Setup Step 7).
-8.  **Update Landing Logic:** Ensure `HandleSpecificMovementEffect` is called from appropriate game logic (e.g., Character Blueprint's `Event OnMovementModeChanged` or a landing Gameplay Ability), passing the correct landing type tag and impact velocity.
-
-## 8. Build and Test
-
-Rebuild your project (if you made C++ changes) and test thoroughly in the editor, ensuring input works, states change correctly (check tags via console `showdebug abilitysystem`), speed attributes are modified, and components react as expected (capsule resize, movement FX triggering). Check the Output Log for warnings/errors.
+* **Create DataTable:** Create a **DataTable** asset (Miscellaneous -> Data Table). Choose `FSurfaceEffectAssets` as the row structure.
+* **Populate DataTable:** Add rows, using the `EPhysicalSurface` enum name as the Row Name (e.g., `SurfaceType1`, `SurfaceType2`, `Default`). For each row (surface type):
+  * Fill the `WalkSounds`, `RunSounds`, `CrouchSounds`, `LandLightSounds`, `LandHardSounds` arrays (`FWeightBasedSoundVariations`) with \`

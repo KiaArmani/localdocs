@@ -1,0 +1,55 @@
+# MotionSpeedSyncComponent
+
+The `UMotionSpeedSyncComponent` synchronizes the MaxWalkSpeed attribute from a UMotionAttributeSet to the MaxWalkSpeed property of a UCharacterMovementComponent on the same actor.
+
+## Overview
+
+This simple but essential component creates a bridge between the Gameplay Ability System's attribute-based speed management and the Character Movement Component's actual movement speed. It listens for changes to the MaxWalkSpeed attribute and applies them to the CMC property.
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `bShowDebugInformation` | `bool` | If true, prints debug information to the screen |
+
+## Functions
+
+| Function | Return Type | Description |
+|----------|-------------|-------------|
+| `PrintDebugInformation` | `void` | Prints current sync status and values to the screen |
+
+## Usage
+
+Add this component to your character if you're using `UMotionAttributeSet` or a custom AttributeSet that has a MaxWalkSpeed attribute. The component will:
+
+1. Find the Ability System Component and Character Movement Component
+2. Listen for changes to the MaxWalkSpeed attribute
+3. When the attribute changes, update the Character Movement Component's MaxWalkSpeed property
+
+## Requirements
+
+- Your character must have an Ability System Component
+- The ASC must have an AttributeSet with the MaxWalkSpeed attribute (e.g., UMotionAttributeSet)
+- Your character must have a Character Movement Component
+
+## Example
+
+```cpp
+// Inside your character class setup
+UMotionSpeedSyncComponent* SpeedSyncComp = CreateDefaultSubobject<UMotionSpeedSyncComponent>(TEXT("SpeedSyncComponent"));
+// No additional configuration is typically needed
+```
+
+## Gameplay System Integration
+
+1. Create Gameplay Effects that modify the MaxWalkSpeed attribute (Add, Multiply, or Override)
+2. Apply those effects using your character's Gameplay Abilities (e.g., Sprint, Crouch)
+3. The SpeedSyncComponent will ensure the CharacterMovementComponent's MaxWalkSpeed stays in sync
+
+## Blueprint Usage
+
+After adding the component to your character blueprint in the Components panel:
+
+1. Select the MotionSpeedSyncComponent in the Components panel
+2. Enable bShowDebugInformation if you want to verify it's working
+3. No other configuration is typically required 

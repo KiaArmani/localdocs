@@ -5,18 +5,70 @@
     "children": [
       {
         "type": "link",
-        "name": "Overview",
-        "href": "/docs"
+        "name": "Changelog",
+        "href": "/docs/"
       },
       {
         "type": "link",
-        "name": "Changelog",
-        "href": "/docs/changelog"
+        "name": "Quick Start",
+        "href": "/docs/quickstart"
+      },
+      {
+        "type": "link",
+        "name": "Setup",
+        "href": "/docs/setup"
       },
       {
         "type": "link",
         "name": "Architecture",
         "href": "/docs/architecture"
+      }
+    ]
+  },
+  {
+    "type": "category",
+    "name": "Core Components",
+    "children": [
+      {
+        "type": "link",
+        "name": "Camera Component",
+        "href": "/docs/cameracomponent"
+      }
+    ]
+  },
+  {
+    "type": "category",
+    "name": "Gameplay Components",
+    "children": [
+      {
+        "type": "link",
+        "name": "Breathe Component",
+        "href": "/docs/breathecomponent"
+      },
+      {
+        "type": "link",
+        "name": "Crouch Component",
+        "href": "/docs/crouchcomponent"
+      },
+      {
+        "type": "link",
+        "name": "Jump Component",
+        "href": "/docs/jumpcomponent"
+      },
+      {
+        "type": "link",
+        "name": "Movement FX Component",
+        "href": "/docs/movementsoundcomponent"
+      },
+      {
+        "type": "link",
+        "name": "Speed Sync Component",
+        "href": "/docs/speedsynccomponent"
+      },
+      {
+        "type": "link",
+        "name": "Sprint Component",
+        "href": "/docs/sprintcomponent"
       }
     ]
   }

@@ -1,0 +1,68 @@
+# MotionSprintComponent
+
+The `UMotionSprintComponent` serves as a hook point for logic reacting to the sprint state. The actual sprint state and speed modification are handled by the Gameplay Ability and Gameplay Effects, triggered by input and managed by the Ability System Component.
+
+## Overview
+
+This component primarily reacts to the `State.Movement.Sprinting` Gameplay Tag, triggering cosmetic effects (like camera curves) and providing state tracking for sprint duration and ramp-down phase. It does not directly modify character speed; that should be handled by Gameplay Effects.
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `bShowDebugInformation` | `bool` | Optional flag to show debug information |
+| `SprintCameraRotationCurve` | `FStructMotionCurve` | Curve to apply to the camera rotation while sprinting |
+
+## Functions
+
+| Function | Return Type | Description |
+|----------|-------------|-------------|
+| `PrintDebugInformation` | `void` | Prints debug information to the screen |
+| `GetCurrentSprintDuration` | `float` | Calculates the duration the character has been sprinting in the current sprint session |
+| `StartRampDown` | `void` | Initiates the sprint ramp-down phase |
+| `StopRampDown` | `void` | Stops the ramp-down phase prematurely |
+| `GetRampDownElapsedTime` | `float` | Calculates the elapsed time since the ramp-down phase started |
+| `IsRampingDown` | `bool` | Checks if the component is currently in the ramp-down phase |
+| `GetPeakSprintBonus` | `float` | Gets the peak speed bonus recorded when the ramp-down phase started |
+
+## Usage
+
+Add this component to your character and configure appropriate Gameplay Abilities that add/remove the `State.Movement.Sprinting` gameplay tag. The component will:
+
+1. Monitor the `State.Movement.Sprinting` tag on the character's Ability System Component
+2. When the tag is added, apply camera effects and start tracking sprint duration
+3. When the tag is removed, update state variables
+4. Provide ramp-down management for gradual speed reduction
+
+## Requirements
+
+- Your character must have an Ability System Component
+- You need to create Gameplay Abilities that add/remove the `State.Movement.Sprinting` tag
+- You should create Gameplay Effects that modify speed when sprinting
+- For camera effects, your character needs a `UMotionCameraComponent`
+
+## Example
+
+```cpp
+// Inside your character class setup
+UMotionSprintComponent* SprintComp = CreateDefaultSubobject<UMotionSprintComponent>(TEXT("SprintComponent"));
+// Configuration is typically done in the editor
+```
+
+## Gameplay Ability Setup
+
+Your sprint ability should:
+
+1. Apply the `State.Movement.Sprinting` gameplay tag when sprint input is pressed
+2. Apply a Gameplay Effect that modifies movement speed
+3. Call `StartRampDown` when sprint input is released
+4. Use `GetRampDownElapsedTime` and `GetPeakSprintBonus` to gradually decrease the sprint speed boost during ramp-down
+5. Remove the gameplay tag and effect after the ramp-down is complete
+
+## Blueprint Usage
+
+After adding the component to your character blueprint in the Components panel:
+
+1. Select the MotionSprintComponent in the Components panel
+2. Configure the SprintCameraRotationCurve in the Details panel
+3. Create a corresponding GA_Sprint Gameplay Ability Blueprint that leverages the ramp-down functions 

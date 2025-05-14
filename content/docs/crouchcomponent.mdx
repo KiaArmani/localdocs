@@ -1,0 +1,64 @@
+# MotionCrouchComponent
+
+The `UMotionCrouchComponent` handles character crouching mechanics, including capsule resizing, collision checking, and camera adjustments.
+
+## Overview
+
+This component manages the physical aspects of crouching (capsule size, position, collision), responding to the `State.Movement.Crouching` gameplay tag in the Ability System. It does not manage input or speed modification, which should be handled by appropriate Gameplay Abilities and Effects.
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `bShowDebugInformation` | `bool` | Toggle to display debug information on screen |
+| `CrouchCameraOffset` | `FRuntimeVectorCurve` | Curve that defines the camera offset during crouching |
+| `TargetCrouchHalfHeight` | `float` | The target half height of the capsule when fully crouched |
+| `CrouchInterpolationSpeed` | `float` | Speed at which the capsule interpolates its height (units per second) |
+
+## Functions
+
+| Function | Return Type | Description |
+|----------|-------------|-------------|
+| `CanUncrouch` | `bool` | Checks if uncrouching to the standing height would cause collision |
+| `PrintDebugInformation` | `void` | Prints debug information to screen |
+
+## Usage
+
+Add this component to your character and configure appropriate Gameplay Abilities that add/remove the `State.Movement.Crouching` gameplay tag. The component will:
+
+1. Monitor the `State.Movement.Crouching` tag on the character's Ability System Component
+2. When the tag is added, smoothly interpolate the capsule height to the `TargetCrouchHalfHeight`
+3. When the tag is removed, check if uncrouching would cause collision and smoothly interpolate back to the original height if safe
+
+## Requirements
+
+- Your character must have an Ability System Component
+- You need to create Gameplay Abilities that add/remove the `State.Movement.Crouching` tag
+- You should create Gameplay Effects that modify speed when crouched
+
+## Example
+
+```cpp
+// Inside your character class setup
+UMotionCrouchComponent* CrouchComp = CreateDefaultSubobject<UMotionCrouchComponent>(TEXT("CrouchComponent"));
+// Configuration can be done in the editor or in code
+CrouchComp->TargetCrouchHalfHeight = 50.0f;
+CrouchComp->CrouchInterpolationSpeed = 300.0f;
+```
+
+## Gameplay Ability Setup
+
+Your crouch ability should:
+
+1. Check `CanUncrouch()` on the server when attempting to stand up
+2. Apply/remove the `State.Movement.Crouching` gameplay tag
+3. Apply/remove a Gameplay Effect that modifies movement speed
+
+## Blueprint Usage
+
+After adding the component to your character blueprint in the Components panel:
+
+1. Select the MotionCrouchComponent in the Components panel
+2. Configure the TargetCrouchHalfHeight in the Details panel
+3. Set the CrouchInterpolationSpeed to control transition smoothness
+4. Create a corresponding GA_Crouch Gameplay Ability Blueprint 

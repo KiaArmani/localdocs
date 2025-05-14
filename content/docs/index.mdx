@@ -1,5 +1,99 @@
-# Motion 2.0
+# Motion 2.0 Preview 1
 
-Welcome to Preview 1 of Motion 2.0. There is not much to see here yet.
+This version represents a major refactoring focused on improving modularity, ease of integration, multiplayer readiness (via the [Gameplay Ability System](https://dev.epicgames.com/documentation/en-us/unreal-engine/gameplay-ability-system-for-unreal-engine)), and adherence to standard Unreal Engine practices.
 
-Feel free to check out the existing pages in the sidebar.
+<Alert>
+  <AlertDescription>
+    **This is a preview version. It is only intended for evaluation purposes and should not be used to upgrade an existing project!**
+  </AlertDescription>
+</Alert>
+
+## Major Changes & Refactoring
+
+* [**Gameplay Ability System**](https://dev.epicgames.com/documentation/en-us/unreal-engine/gameplay-ability-system-for-unreal-engine) **(GAS) Integration:**
+  * Core state management (e.g., Crouching) and attribute modification (e.g., Speed) are now expected to be handled via GAS [Gameplay Tags](https://github.com/tranek/GASDocumentation?tab=readme-ov-file#concepts-gt), [Gameplay Abilities](https://github.com/tranek/GASDocumentation?tab=readme-ov-file#concepts-ga), and [Gameplay Effects](https://github.com/tranek/GASDocumentation?tab=readme-ov-file#concepts-ge). This leverages GAS's built-in replication features.
+  * Components like `UMotionCrouchComponent` now primarily *react* to replicated GAS tags rather than managing state internally.
+  * Removed custom `UMotionAbilitySystemComponent`. You should use the standard engine `UAbilitySystemComponent` or your own subclass.
+  * **Requirement:** Using features like replicated crouching now implicitly requires your project to have GAS enabled and configured (ASC, AttributeSet).
+* **Decoupled Components:** Components are designed to be more self-contained and have fewer dependencies on specific base classes or sibling components.
+* **Input System Overhaul:**
+  * Input binding is now your responsibility, typically handled in your Character or PlayerController's `SetupPlayerInputComponent` function using the standard `UEnhancedInputComponent`.
+  * Removed `UMotionInputComponent`. Helper function `BindActionByTag` (which relied on `UMotionInputConfig`) removed from `UMotionAbilitySystemHelper`.
+  * Removed `UMotionInputConfig` Data Asset. You should manage input action references directly or via your own configuration methods.
+* **Base Class Removal (`AMotionCharacter`):**
+  * Removed the `AMotionCharacter` C++ class entirely from the plugin source. It is no longer required.
+  * You should inherit directly from `ACharacter` (or your own base character) and add Motion components manually.
+  * The provided `B_MotionCharacter` Blueprint serves as the primary example demonstrating component setup and integration.
+* **Movement Component Removal (`UMotionCharacterMovementComponent`):**
+  * Removed the custom `UMotionCharacterMovementComponent` class entirely.
+  * You should use the standard `UCharacterMovementComponent`.
+  * **Speed Management:** Functionality like additive speed modifiers (previously handled by the custom CMC) must now be implemented using **GAS Attributes** (e.g., `MaxWalkSpeed`) and **Gameplay Effects** applied by your Gameplay Abilities.&#x20;
+  * The final attribute value needs to be synced back to the standard CMC's `MaxWalkSpeed` property. Checks like `State.Movement.Halted` should also be implemented via Gameplay Effects modifying the speed attribute.
+    A sample component that implements this behaviour ships with Motion (`UMotionSpeedSyncComponent`).
+* **Camera Component Refactoring (`UMotionCameraComponent`):**
+  * Removed the dependency on the separate `UMotionCurveManager` component.
+  * The component now manages and evaluates its own internal curve arrays (`CameraLocationCurves`, `CameraRotationCurves`) via its `TickComponent`.
+  * Added Blueprint-callable functions for managing these internal curves dynamically.
+* **Crouch Component Refactoring (`UMotionCrouchComponent`):**
+  * State management (`bIsInCrouch`) removed; now reacts to the `State.Movement.Crouching` Gameplay Tag on the ASC.
+  * Input handling (`SetCrouch`, `DoCrouch`, `DoUncrouch`) removed; input should trigger a Gameplay Ability.
+  * Speed modification removed; expects a Gameplay Ability to apply/remove speed-modifying Gameplay Effects.
+  * `PerformCapsuleResize` function added to handle physical changes based on tag state changes.
+  * `CanUncrouch` function remains for server-side ability checks.
+* **Native Gameplay Tags:**
+  * Implemented standard native Gameplay Tag definition (`MotionGameplayTags.h/.cpp`, `Config/DefaultGameplayTags.ini`, initialization in `StartupModule`).
+  * Code now references tags via the static getter (e.g., `FMotionGameplayTags::Get().State_Movement_Crouching`).
+* **Asset Referencing:** Consistently uses `TSoftObjectPtr` for asset references (`UInputAction`, `UMetaSoundSource`) in configuration structs/assets where appropriate.
+* **Extensibility:** Key component functions marked `virtual`.
+* **Code Quality:** Added more logging (`UE_LOG`) and improved comments.
+* **Sprint Component Refactoring `UMotionSprintComponent`:** Added a C++ sprint component (`Source/MotionCore/Components/MotionSprintComponent.h/.cpp`) designed to work with GAS.&#x20;
+* It reacts to the `State.Movement.Sprinting` tag, primarily for triggering cosmetic effects (like camera curves) or providing a hook point. **Does not manage speed.**
+* **Movement Sound Component Refactoring `UMotionMovementSoundComponent`:**
+  * Added optional throttling for footstep and landing effects (`MinTimeBetweenFootsteps`, `MinTimeBetweenLandings`).
+  * Added basic environmental context detection via sphere overlap (`EnvironmentCheckRadius`, `EnvironmentCheckChannel`, `WetEnvironmentActorTag`) and passes detected tags (e.g., `Motion.Environment.State.Wet`) to the Gameplay Cue via `AggregatedSourceTags`.
+  * Passes character Effect Profile tags (`Motion.Character.EffectProfile.*`) from the ASC to the Gameplay Cue via `AggregatedSourceTags`.
+  * Uses a custom `FMotionMovementEffectContext` to pass `HitResult`, `SurfaceType`, `Speed`, and `ImpactVelocityZ` via `Parameters.EffectContext`. The context now also stores a pointer to the resolved `FSurfaceEffectAssets` data row to simplify Cue logic.
+* **Updated `FMotionMovementEffectContext` Struct:** Added `EffectAssetsData` pointer member.
+* **New `UMotionGameplayCueNotify_Static` Base Class:** Added a C++ base class (`AbilitySystem/MotionGameplayCueNotify_Static.h/.cpp`) for the generic movement FX cue.&#x20;
+* This class contains the core logic for parsing context, selecting sound variations based on weight/type, and spawning effects (sound, decal, particle), simplifying implementation. You should inherit your Gameplay Cue Blueprints from this class.
+* **New Gameplay Tags:** Added tags for Effect Profiles (`Motion.Character.EffectProfile.*`) and Environmental Context (`Motion.Environment.State.*`, `Motion.Environment.Location.*`) to `FMotionGameplayTags`.
+* **Jump Component Refactor`UMotionJumpComponent`:** Added a C++ jump component (`Source/MotionCore/Components/MotionJumpComponent.h/.cpp`) designed to work with GAS.&#x20;
+* It reacts to the `State.Movement.Jumping` tag, primarily for triggering cosmetic effects (like camera curves). **Does not manage jump height/speed.**
+* **Breathe Component Refactor`UMotionBreatheComponent`:**&#x20;
+  * Converted from Blueprint.&#x20;
+  * Now ticks to check velocity and adds/pauses a breathing curve directly on `UMotionCameraComponent`.&#x20;
+  * Removed dependency on `UMotionCurveManager` and `AMotionCharacter` delegates.
+* **New `EMotionAbilityInputID` Enum:** Added a C++ enum (`Public/AbilitySystem/MotionAbilityInputID.h`) for defining logical ability input IDs, used for binding Enhanced Input to GAS.
+* **New/Updated `UMotionAbilitySystemHelper`:** Added static Blueprint-callable helper functions:
+  * `BindEnhancedInputActionToASC`: Binds Enhanced Input `Started`/`Completed` events to `ASC::AbilityLocalInputPressed/Released` using an `EMotionAbilityInputID`.
+  * `GetEnhancedInputComponentFromActor`: Gets and casts the input component from an actor.
+  * `TriggerAbilityInputReleased`: Explicitly calls `ASC::AbilityLocalInputReleased` (workaround for potential `WaitInputRelease` issues).
+* **Updated `UMotionSprintComponent`:** Added functions and state variables (`StartRampDown`, `StopRampDown`, `GetCurrentSprintDuration`, `GetRampDownElapsedTime`, `GetPeakSprintBonus`, `IsRampingDown`, `bIsRampingDown`, `RampDownStartTime`, `PeakSprintBonus`) to support gradual ramp-down logic driven by a Gameplay Ability.
+
+## Deprecations / Removals
+
+* **`BPC_WalkComponent.uasset`:** Removed. This component is considered redundant in the new GAS-focused architecture. Base walking speed should be managed via GAS Attributes, state is implied by the absence of other movement tags (Sprint, Crouch), and cosmetics are handled by other components (MovementSound, Camera) or AnimBP.
+* **`BPC_BreatheComponent.uasset`:** Replaced by the refactored C++ `UMotionBreatheComponent`. You should ensure a `UMotionCameraComponent` exists on the character and configure the breathing curve on the `UMotionBreatheComponent`.
+* **`BPC_SprintComponent.uasset`:** Replaced by the new C++ `UMotionSprintComponent`. You should migrate any custom logic and use the new component with a corresponding `GA_Character_Sprint` Gameplay Ability.
+* **`BPC_JumpComponent.uasset`:** Replaced by the new C++ `UMotionJumpComponent`. You should migrate any custom logic and use the new component with a corresponding `GA_Character_Jump` Gameplay Ability.
+* **`BPC_MovementSoundComponent.uasset`:** Replaced by the refactored C++ `UMotionMovementSoundComponent`. You need to migrate to the new Gameplay Cue based system, creating a `SurfaceEffectsTable` DataTable (using `FSurfaceEffectAssets`), implementing a generic Gameplay Cue Blueprint, and updating Anim Notifies.
+* **`FStructMovementSound`:** Replaced by `FSurfaceEffectAssets`.
+* **`EMovementSoundTypes`:** Enum removed from `MotionEnums.h` (replaced by Gameplay Tags).
+* **`UMotionInputComponent`:** Removed entirely (`.h` and `.cpp`). Helper function `BindActionByTag` (which relied on `UMotionInputConfig`) removed from `UMotionAbilitySystemHelper`. You should use the standard `UEnhancedInputComponent`.
+* **`UMotionAbilitySystemComponent`:** Removed entirely (`.h` and `.cpp`). You should use the standard `UAbilitySystemComponent` or your own subclass. Dependency in `UMotionAnimInstance` removed.
+* **`AMotionPlayerController`:** Removed entirely (`.h` and `.cpp`). You should use the standard `APlayerController`.
+* **`AMotionGameMode` / `B_MotionGameMode.uasset`:** Removed entirely (`.h`, `.cpp`, `.uasset`). The plugin does not require a specific GameMode.
+* **`UMotionCurveManager`:** Removed entirely (`.h` and `.cpp`). Functionality integrated into `UMotionCameraComponent`.
+* **`AMotionCharacter`:** Removed entirely (`.h` and `.cpp`). Functionality moved to components or documentation examples.
+* **`UMotionCharacterMovementComponent`:** Removed entirely (`.h` and `.cpp`). You should use the standard `UCharacterMovementComponent`. Speed/state logic moved to GAS Attributes/Effects/Abilities that you implement.
+* **`UMotionInputConfig`:** Removed entirely (`.h` and `.cpp`). You manage input actions directly.
+* `UMotionCrouchComponent`'s internal state management, direct input handling (`SetCrouch`, `DoCrouch`, `DoUncrouch`), and direct speed modification.
+* Removed hard `TObjectPtr` references to `UInputAction` and `UMetaSoundSource` in config/structs (replaced with `TSoftObjectPtr`).
+
+## Known Issues / Important Notes
+
+* This version requires the Gameplay Ability System (GAS) and Enhanced Input plugins to be enabled for full functionality, especially replication.
+* You must now handle input binding and ability granting within your own project setup.
+* You need to provide Gameplay Abilities (like `GA_Character_Crouch`, `GA_Character_Sprint`, `GA_Character_Jump`) and Gameplay Effects (like `GE_Movement_CrouchSpeed`, `GE_Movement_SprintSpeed`) to drive the component logic via GAS tags and attributes. See the provided components for references.
+* You need to create a DataTable based on `FSurfaceEffectAssets` and create a Gameplay Cue Blueprint inheriting from `UMotionGameplayCueNotify_Static` (or implement similar logic) to use the `UMotionMovementSoundComponent`.
+* The example Blueprint `B_MotionCharacter`(now inheriting directly from `ACharacter`) serves as the primary example.

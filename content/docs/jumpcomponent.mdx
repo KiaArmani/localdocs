@@ -1,0 +1,61 @@
+# MotionJumpComponent
+
+The `UMotionJumpComponent` handles cosmetic effects and logic related to jumping. It primarily reacts to the `State.Movement.Jumping` gameplay tag and applies camera effects when jumping.
+
+## Overview
+
+This component is responsible for adding visual feedback when jumping, such as camera shakes or effects. The actual jump action (applying velocity, checking CanJump) should be handled by `ACharacter::Jump`, typically triggered via a Gameplay Ability.
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `bShowDebugInformation` | `bool` | Optional flag to show debug information |
+| `JumpShakeCurveIdentifier` | `FString` | Identifier used when adding/removing the curve from the Camera Component (default: "JumpShake") |
+| `JumpShakeCurve` | `FRuntimeVectorCurve` | Curve that defines the jump camera shake pattern (applied to camera rotation) |
+
+## Functions
+
+| Function | Return Type | Description |
+|----------|-------------|-------------|
+| `PrintDebugInformation` | `void` | Prints current jump state and debug information to the screen |
+
+## Usage
+
+Add this component to your character and configure appropriate Gameplay Abilities that add the `State.Movement.Jumping` gameplay tag. The component will:
+
+1. Monitor the `State.Movement.Jumping` tag on the character's Ability System Component
+2. When the tag is added, apply the `JumpShakeCurve` to the character's `UMotionCameraComponent`
+3. Automatically handle the one-shot camera effect
+
+## Requirements
+
+- Your character must have an Ability System Component
+- You need to create Gameplay Abilities that add the `State.Movement.Jumping` tag
+- For camera effects, your character needs a `UMotionCameraComponent`
+- A valid `JumpShakeCurve` should be assigned
+
+## Example
+
+```cpp
+// Inside your character class setup
+UMotionJumpComponent* JumpComp = CreateDefaultSubobject<UMotionJumpComponent>(TEXT("JumpComponent"));
+// Configuration is typically done in the editor
+```
+
+## Gameplay Ability Setup
+
+Your jump ability should:
+
+1. Call the standard `Character->Jump()` function to perform the physical jump
+2. Apply the `State.Movement.Jumping` gameplay tag
+3. Handle removing the tag when landing (typically done in the ability's EndAbility)
+
+## Blueprint Usage
+
+After adding the component to your character blueprint in the Components panel:
+
+1. Select the MotionJumpComponent in the Components panel
+2. Assign a JumpShakeCurve in the Details panel
+3. Create a corresponding GA_Jump Gameplay Ability Blueprint
+4. In your Gameplay Ability, ensure you add the State.Movement.Jumping tag when jumping 

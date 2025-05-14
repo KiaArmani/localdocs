@@ -1,0 +1,71 @@
+# MotionMovementSoundComponent
+
+The `UMotionMovementSoundComponent` is responsible for triggering movement-related sound effects by executing Gameplay Cues based on context (movement event, surface type, character state). It's designed to trigger locally predicted cosmetic Gameplay Cues.
+
+## Overview
+
+This component handles footstep and landing sound/effect triggering based on the current surface type, movement state, and environmental context. It uses a DataTable to map Physical Surface Types to effect assets and executes Gameplay Cues with rich context information.
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `SurfaceEffectsTable` | `TSoftObjectPtr<UDataTable>` | Data Table mapping Physical Surface Types to effect assets (sounds, visuals) |
+| `GenericFootstepCueTag` | `FGameplayTag` | The Gameplay Cue Tag to execute for footstep/movement effects |
+| `MinTimeBetweenFootsteps` | `float` | Minimum time in seconds between footstep effect triggers to prevent spamming (0 to disable) |
+| `MinTimeBetweenLandings` | `float` | Minimum time in seconds between landing effect triggers (0 to disable) |
+| `EnvironmentCheckRadius` | `float` | Radius for the sphere overlap check used to detect environmental context (e.g., 'Wet') |
+| `EnvironmentCheckChannel` | `ECollisionChannel` | Collision channel used for the environmental overlap check |
+| `FootstepSocket_L` | `FName` | Socket name on the character mesh for left footstep sounds |
+| `FootstepSocket_R` | `FName` | Socket name on the character mesh for right footstep sounds |
+| `SurfaceTraceChannel` | `ECollisionChannel` | Trace channel used for detecting the ground surface type |
+| `SurfaceTraceDistance` | `float` | Max distance to trace downwards to find the ground surface |
+| `HardLandThreshold` | `float` | Impact velocity threshold after which a landing is treated as "hard" |
+| `bShowDebugInformation` | `bool` | Optional flag to show debug information (trace lines) |
+
+## Functions
+
+| Function | Return Type | Description |
+|----------|-------------|-------------|
+| `TriggerFootstepEffect` | `void` | Triggers a footstep effect based on the specified foot (called from Anim Notifies) |
+| `HandleSpecificMovementEffect` | `void` | Triggers a specific movement effect (like landing) where the type is known by the caller |
+
+## Usage
+
+1. Add this component to your character
+2. Create a DataTable using the `FSurfaceEffectAssets` row structure, with rows for each surface type
+3. Add anim notifies to your character's animations that call `TriggerFootstepEffect`
+4. Create a Gameplay Cue Blueprint that inherits from `UMotionGameplayCueNotify_Static` to handle the effects
+5. The component automatically handles landing effects via movement mode changes
+
+## Requirements
+
+- Your character must have an Ability System Component
+- You must create a DataTable with `FSurfaceEffectAssets` row structure
+- You must implement a Gameplay Cue (e.g., inheriting from `UMotionGameplayCueNotify_Static`)
+- Your character animations should have anim notifies for footsteps
+
+## Example
+
+```cpp
+// Inside your character class setup
+UMotionMovementSoundComponent* MovementFXComp = CreateDefaultSubobject<UMotionMovementSoundComponent>(TEXT("MovementFXComponent"));
+// Configuration is typically done in the editor
+```
+
+## Blueprint Usage
+
+After adding the component to your character blueprint in the Components panel:
+
+1. Select the MotionMovementSoundComponent in the Components panel
+2. Assign your SurfaceEffectsTable DataTable
+3. Configure socket names, trace settings, and other properties
+4. Set up anim notifies in your animation blueprints that call TriggerFootstepEffect with the appropriate foot tag
+
+## DataTable Setup
+
+Create a DataTable with `FSurfaceEffectAssets` row structure:
+
+1. For each surface type (e.g., Concrete, Grass), add a row using the PhysicalSurface enum name
+2. Populate the sound arrays with variations for different movement types (walk, run, crouch, land)
+3. Optionally add visual effects (particles, decals) 

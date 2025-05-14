@@ -1,0 +1,69 @@
+# Ability System Helper
+
+The `UMotionAbilitySystemHelper` is a Blueprint Function Library that provides utility functions for interacting with the Gameplay Ability System and related input binding.
+
+## Overview
+
+This helper class simplifies common tasks related to the Gameplay Ability System (GAS), such as finding and initializing Ability System Components, adding Attribute Sets, and binding Enhanced Input actions to GAS input handling.
+
+## Functions
+
+| Function | Return Type | Description |
+|----------|-------------|-------------|
+| `AddAttributeSetToActor` | `bool` | Adds the specified AttributeSet class to the AbilitySystemComponent found on the TargetActor |
+| `GetAbilitySystemComponentFromActor` | `UAbilitySystemComponent*` | Gets the AbilitySystemComponent from an Actor, searching common locations (self, PlayerState) |
+| `InitializeAbilityActorInfo` | `void` | Calls InitAbilityActorInfo on the provided AbilitySystemComponent |
+| `BindEnhancedInputActionToASC` | `void` | Binds Enhanced Input Action events (Started, Completed) directly to AbilityLocalInputPressed/Released |
+| `GetEnhancedInputComponentFromActor` | `UEnhancedInputComponent*` | Gets the InputComponent from an Actor and attempts to cast it to UEnhancedInputComponent |
+| `TriggerAbilityInputReleased` | `void` | Explicitly calls AbilityLocalInputReleased on the ASC for the given InputID |
+
+## Usage
+
+These helper functions are designed to be called from Blueprints to simplify common GAS setup and operations.
+
+### Adding an AttributeSet
+
+```cpp
+// In your Character's BeginPlay or after ASC initialization
+UMotionAbilitySystemHelper::AddAttributeSetToActor(ThisActor, UMotionAttributeSet::StaticClass());
+```
+
+### Initializing AbilityActorInfo
+
+```cpp
+// In your Character's PossessedBy (server) or OnRep_PlayerState (client)
+UAbilitySystemComponent* ASC = UMotionAbilitySystemHelper::GetAbilitySystemComponentFromActor(PlayerState);
+if (ASC)
+{
+    UMotionAbilitySystemHelper::InitializeAbilityActorInfo(ASC, PlayerState, Character);
+}
+```
+
+### Binding Enhanced Input to Gameplay Abilities
+
+```cpp
+// In your Character's SetupPlayerInputComponent, on locally controlled pawns
+UEnhancedInputComponent* EIC = UMotionAbilitySystemHelper::GetEnhancedInputComponentFromActor(this);
+UAbilitySystemComponent* ASC = UMotionAbilitySystemHelper::GetAbilitySystemComponentFromActor(this);
+if (EIC && ASC)
+{
+    UMotionAbilitySystemHelper::BindEnhancedInputActionToASC(ASC, EIC, SprintInputAction, EMotionAbilityInputID::Sprint);
+}
+```
+
+## Blueprint Usage
+
+In Blueprints, you can access these functions under the "Motion|AbilitySystem" category:
+
+1. **Add Attribute Set:**
+   - Call "Add Attribute Set To Actor" with your character and the desired attribute set class
+   - This is useful during BeginPlay to add attribute sets to characters dynamically
+
+2. **Enhanced Input Binding:**
+   - In your SetupPlayerInputComponent event (or after input setup):
+   - Get your ASC and Enhanced Input Component
+   - Call "Bind Enhanced Input Action to ASC" for each gameplay ability input
+   - Connect Started/Completed events for gameplay event activation if using a hybrid approach
+
+3. **Manual Input Released:**
+   - If WaitInputRelease tasks aren't working correctly, explicitly call "Trigger Ability Input Released" from your input's Completed event 

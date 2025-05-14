@@ -1,0 +1,64 @@
+# Motion Gameplay Cue Notify
+
+The `UMotionGameplayCueNotify_Static` is a base class for a static Gameplay Cue Notify designed to handle Movement FX. It extracts context from `FMotionMovementEffectContext` and `FGameplayCueParameters`, looks up assets in a `FSurfaceEffectAssets` DataTable, and spawns sounds accordingly.
+
+## Overview
+
+This class serves as the foundation for creating Gameplay Cue Blueprints that handle movement effects like footsteps and landing sounds. It includes intelligent logic for selecting the appropriate sound variations based on the character's state, the surface type, and other contextual information.
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `bSetMetaSoundParameters` | `bool` | If true, attempts to set standard parameters (Speed, WeightCategory, SurfaceEnum) on spawned MetaSound instances |
+
+## Functions
+
+| Function | Return Type | Description |
+|----------|-------------|-------------|
+| `HandleMovementFX` | `void` | Main handler that extracts context, finds assets, and spawns effects |
+| `GetCharacterWeightTag` | `FGameplayTag` | Determines the character's weight tag from the Source Actor's ASC |
+| `SelectSoundVariations` | `const TArray<TSoftObjectPtr<USoundBase>>&` | Selects the appropriate sound variations array based on context tags and effect profile |
+| `GetRandomSound` | `TSoftObjectPtr<USoundBase>` | Selects a random sound from the provided array |
+| `SpawnSound` | `void` | Spawns the selected sound at the target location, potentially setting MetaSound parameters |
+
+## Usage
+
+This class is primarily designed to be inherited from by Blueprint classes. You can create your own Gameplay Cue Notify blueprint that inherits from `UMotionGameplayCueNotify_Static` and customize various aspects of the behavior.
+
+## Creating a Custom Gameplay Cue Notify
+
+1. Create a Blueprint that inherits from `MotionMovementFXCueNotify (Static)`
+2. Override any of the methods to customize behavior:
+   - Override `HandleMovementFX` for complete control over the effect processing
+   - Override `SelectSoundVariations` to change how sounds are selected for different conditions
+   - Override `SpawnSound` to customize sound spawning or add additional visual effects
+
+## Example
+
+```cpp
+// In your project:
+// 1. Create a Blueprint inheriting from MotionMovementFXCueNotify (Static)
+// 2. Associate it with the GameplayCue tag "Motion.GameplayCue.Movement.FootstepFX"
+// 3. Create a DataTable with structure FSurfaceEffectAssets
+// 4. Set up your MotionMovementSoundComponent to use this DataTable
+```
+
+## MetaSound Integration
+
+By default, when `bSetMetaSoundParameters` is enabled, the following parameters will be set on any spawned MetaSound:
+
+- **Speed**: The character's movement speed when the event occurred
+- **WeightCategory**: A float representation of the character's weight category (1=light, 2=medium, 3=heavy)
+- **SurfaceEnum**: An integer corresponding to the EPhysicalSurface enum value for the surface
+
+You can use these parameters in your MetaSound assets to dynamically alter the sound based on the context.
+
+## Blueprint Implementation
+
+When creating your Gameplay Cue Blueprint:
+
+1. Create a new Blueprint inheriting from `Motion Movement FX Cue Notify (Static)`
+2. Override functions as needed (usually no overrides are needed for basic functionality)
+3. Add custom parameters or visual effects if desired
+4. Ensure your DataTable is properly configured with sound variations for different movement types and surfaces 

@@ -1,0 +1,46 @@
+# MotionBreatheComponent
+
+The `UMotionBreatheComponent` adds a procedural breathing camera rotation effect based on the character's movement state. It requires a `UMotionCameraComponent` on the owning actor.
+
+## Overview
+
+This component automatically adds subtle camera movement when the character is idle (standing still), simulating natural breathing. The effect is paused when the character moves above a certain velocity threshold.
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `CameraBreathingCurve` | `FRuntimeVectorCurve` | Curve that defines the breathing animation pattern (applied to camera rotation) |
+| `BreathingCurveIdentifier` | `FString` | Identifier used when adding/removing the curve from the Camera Component (default: "CameraBreathing") |
+| `IdleVelocityThreshold` | `float` | Threshold velocity below which the character is considered idle and breathing effect is active (default: 5.0) |
+
+## Usage
+
+Simply add the component to your character. The component will automatically:
+
+1. Find the `UMotionCameraComponent` on the same actor
+2. Add a looping breathing curve to the camera rotation
+3. Pause/unpause the curve based on character velocity
+
+## Requirements
+
+- A `UMotionCameraComponent` must be on the same actor
+- A valid `CameraBreathingCurve` should be assigned in the editor
+
+## Example
+
+```cpp
+// Inside your character class setup
+UMotionBreatheComponent* BreatheComp = CreateDefaultSubobject<UMotionBreatheComponent>(TEXT("BreatheComponent"));
+// Configuration can be done in the editor or in code
+BreatheComp->IdleVelocityThreshold = 10.0f; // Increases velocity threshold for breathing effect
+```
+
+## Blueprint Usage
+
+After adding the component to your character blueprint in the Components panel:
+
+1. Select the MotionBreatheComponent in the Components panel
+2. Configure the CameraBreathingCurve in the Details panel
+3. Adjust the IdleVelocityThreshold if needed
+4. Ensure your character has a MotionCameraComponent 

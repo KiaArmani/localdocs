@@ -1,0 +1,128 @@
+# Motion Camera Component
+
+This guide explains the inner workings of the `UMotionCameraComponent`, a specialized camera component designed for advanced control over the player's view in Motion 2.0.
+
+## Overview
+
+`UMotionCameraComponent` (derived from the standard `UCameraComponent`) provides a flexible system for applying procedural camera effects through runtime curves and static offsets. It allows for dynamic adjustments to camera location and rotation, driven by gameplay events or other components. It also directly configures and utilizes the `APlayerCameraManager` for view limits.
+
+## Core Functionality
+
+### 1. Initialization (`BeginPlay`)
+
+When the component begins play, it performs several setup steps:
+
+* **Owner and Components:**
+  * Caches its owning `ACharacter` and its `UCapsuleComponent`. This is crucial for context, like getting default capsule dimensions.
+  * Logs an error if the owner is not an `ACharacter` or if the character is missing a `UCapsuleComponent`.
+* **Initial State Caching:**
+  * `InitialCameraRelativeLocation`: Caches its own starting relative location to its attach parent. This can be used as a fallback in `GetCameraView`.
+* **Player Camera Manager Interaction:**
+  * Retrieves the `APlayerController` from the `OwningCharacter`.
+  * Gets the `APlayerCameraManager` from the `PlayerController`.
+  * **Crucially, it then updates the `PlayerCameraManager`'s view limit properties** (`ViewRollMin`, `ViewRollMax`, `ViewYawMin`, `ViewYawMax`, `ViewPitchMin`, `ViewPitchMax`) using the values set on the `UMotionCameraComponent` itself. This allows `UMotionCameraComponent` to dictate these fundamental view constraints.
+
+### 2. Curve Evaluation (`TickComponent`)
+
+The component ticks every frame to evaluate active procedural camera effects defined by curves:
+
+* **Separate Curve Arrays:** It maintains two arrays: `CameraLocationCurves` and `CameraRotationCurves`, both holding `FStructMotionCurve` objects.
+* **Per-Curve Processing:** For each curve in both arrays:
+  * **Pause Check:** Skips evaluation if `bIsPaused` is true for the curve.
+  * **Time Update:**
+    * Calculates `TimeStep` based on `DeltaTime`, the curve's `Tickrate`, and `bIsReversing` (if true, time moves backward).
+    * Updates `ActiveSeconds` for the curve.
+  * **Looping & Clamping Logic:**
+    * Retrieves `MinTime` and `MaxTime` from the curve asset (`UCurveVector`).
+    * If `ActiveSeconds` exceeds `MaxTime`:
+      * If `bShouldLoop` is true: Wraps `ActiveSeconds` around the curve duration. If also `bShouldReverse`, it flips the `bIsReversing` flag.
+      * If `bShouldLoop` is false: Clamps `ActiveSeconds` to `MaxTime`. If `bShouldReverse` was true, it's set to false.
+    * A similar logic applies if `ActiveSeconds` falls below `MinTime`.
+  * **Value Evaluation:**
+    * Calls `UMotionCurveFunctionLibrary::GetRuntimeVectorCurveValue` with the curve asset and current `ActiveSeconds` to get the `FVector` value from the curve.
+  * **Multiplier Application:** Multiplies the evaluated curve value by the curve's `Multiplier`.
+  * **Accumulation:**
+    * For location curves, the resulting vector is added to `CameraLocationFromCurves`.
+    * For rotation curves, the vector's X, Y, Z components are interpreted as Roll, Pitch, Yaw degrees respectively. This `FRotator` is converted to an `FQuat` and multiplicatively combined with `CameraRotationFromCurves` (which is also an `FQuat` internally, converted to `FRotator` at the end of the tick).
+* **Final Results:** After iterating all curves, `CameraLocationFromCurves` and `CameraRotationFromCurves` hold the total offsets from all active curves for that frame.
+
+### 3. Curve Management API
+
+`UMotionCameraComponent` exposes a comprehensive API to manage the location and rotation curves at runtime:
+
+* `AddLocationCurve(const FStructMotionCurve& MotionCurve)`
+* `AddRotationCurve(const FStructMotionCurve& MotionCurve)`
+  * Adds a new curve or replaces an existing one if an `FStructMotionCurve` with the same `Identifier` already exists.
+  * Logs a warning if the `Identifier` is empty.
+* `RemoveLocationCurve(const FString& Identifier)`
+* `RemoveRotationCurve(const FString& Identifier)`
+  * Removes all curves matching the given `Identifier` (case-insensitive).
+* `SetPauseLocationCurve(const FString& Identifier, bool bNewIsPaused)`
+* `SetPauseRotationCurve(const FString& Identifier, bool bNewIsPaused)`
+  * Finds the curve by `Identifier` and sets its `bIsPaused` state.
+* `ResetLocationCurve(const FString& Identifier)`
+* `ResetRotationCurve(const FString& Identifier)`
+  * Resets the identified curve's `ActiveSeconds` to its start time, sets `bIsReversing` to false, and `bIsPaused` to false.
+
+### 4. Static Offset Management API
+
+Similar to curves, static offsets can be managed:
+
+* `AddStaticLocationOffset(const FString& Identifier, const FVector& Offset)`
+* `AddStaticRotationOffset(const FString& Identifier, const FRotator& Offset)`
+  * Adds or updates a named static offset in `CameraStaticLocationOffsets` or `CameraStaticRotationOffsets` (which are `TMap<FString, FVector/FRotator>`).
+* `RemoveStaticLocationOffset(const FString& Identifier)`
+* `RemoveStaticRotationOffset(const FString& Identifier)`
+  * Removes the offset associated with the identifier.
+
+### 5. View Calculation (`GetCameraView`)
+
+This is the most critical function, overriding the base `UCameraComponent` method to calculate the final camera view (`FMinimalViewInfo DesiredView`):
+
+* **Prerequisites:** Ensures `OwningCharacter` and its `Controller` are valid, otherwise falls back to `Super::GetCameraView`.
+* **Base Location Calculation Strategy:**
+  1. **`CameraSocketName`:** If `CameraSocketName` (an `FName` UPROPERTY) is set and the `OwningCharacter` has a `Mesh`, it uses the mesh socket's location.
+  2. **Component Attach Socket:** If not using `CameraSocketName`, but the component is attached to another via a socket (`GetAttachSocketName() != NAME_None`), it uses that socket's location on the `AttachParentComp`.
+  3. **Initial Relative Offset:** If neither of the above, it attempts to use the `InitialCameraRelativeLocation` (cached in `BeginPlay`) transformed by the `AttachParentComp`'s transform.
+  4. **Owner Actor Location:** As a last resort if `AttachParentComp` is null, it uses `OwningCharacter->GetActorLocation()`.
+  5. **Component Location:** Absolute failsafe if owner is also missing, uses `GetComponentLocation()`.
+* **Base Rotation:** Always starts with `OwningCharacter->GetController()->GetControlRotation()`. This ensures the camera generally follows player input.
+* **Applying Location Modifiers (Order of Operations):**
+  1. **Target Offset by Pitch:** If `CameraTargetOffsetByPitch.ExternalCurve` (a `FRuntimeVectorCurve` UPROPERTY) is assigned, it's evaluated using the `BaseRotation.Pitch` as the input time. The resulting `FVector` offset is rotated by `BaseRotation` and added to `BaseLocation` to get `FinalLocation`.
+  2. **Additive Location Curves:** The `CameraLocationFromCurves` (calculated in `TickComponent`) is added to `FinalLocation`.
+  3. **Additive Static Location Offsets:** All vectors in the `CameraStaticLocationOffsets` map are summed up and added to `FinalLocation`.
+* **Applying Rotation Modifiers (Order of Operations):**
+  1. **Additive Rotation Curves:** The `CameraRotationFromCurves` (calculated in `TickComponent`, an `FRotator`) is converted to an `FQuat` and pre-multiplied with `FinalRotationQuat` (`FQuat(CameraRotationFromCurves) * FinalRotationQuat`).
+  2. **Additive Static Rotation Offsets:** Each `FRotator` in the `CameraStaticRotationOffsets` map is converted to an `FQuat` and pre-multiplied with `FinalRotationQuat`.
+  * Starts with `FinalRotationQuat = BaseRotation.Quaternion()`.
+* **Setting Final View:**
+  * `DesiredView.Location = FinalLocation;`
+  * `DesiredView.Rotation = FinalRotationQuat.Rotator();`
+* **Pitch Clamping:** If `OwningPlayerCameraManager` is valid, `DesiredView.Rotation.Pitch` is clamped using `OwningPlayerCameraManager->ViewPitchMin` and `OwningPlayerCameraManager->ViewPitchMax`.
+* **Standard Camera Properties:**
+  * Replicates the necessary parts of `Super::GetCameraView` to set standard properties on `DesiredView` like `FOV`, `AspectRatio`, `bConstrainAspectRatio`, `ProjectionMode`, `OrthoWidth`, `PostProcessBlendWeight`, and `PostProcessSettings`. It explicitly avoids calling `Super::GetCameraView()` to have full control.
+  * Handles XR HMD logic via `HandleXRCamera()` if `IsXRHeadTrackedCamera()` is true.
+* **Motion Vectors:** Sets `DesiredView.PreviousViewTransform` using `FMotionVectorSimulation::Get().GetPreviousTransform(this)` for temporal anti-aliasing and motion blur.
+* **Component Transform Update:** Finally, it calls `SetWorldLocationAndRotation(DesiredView.Location, DesiredView.Rotation)` to move the actual camera component to the calculated view.
+
+### 6. Editor Preview (`GetEditorPreviewInfo`)
+
+For editor previews, if the component is active, it simply calls its own `GetCameraView` logic to provide an accurate preview.
+
+## Key UPROPERTY Members
+
+* `FString CameraSocketName`: Optional socket on the character's mesh to use as the base location.
+* `TArray<FStructMotionCurve> CameraLocationCurves`: Array to manage procedural location curves.
+* `TArray<FStructMotionCurve> CameraRotationCurves`: Array to manage procedural rotation curves.
+* `TMap<FString, FVector> CameraStaticLocationOffsets`: Map for named static location offsets.
+* `TMap<FString, FRotator> CameraStaticRotationOffsets`: Map for named static rotation offsets.
+* `FRuntimeVectorCurve CameraTargetOffsetByPitch`: An optional curve that can apply a location offset based on the camera's current pitch.
+* View Limit Properties (e.g., `ViewPitchMin`, `ViewPitchMax`, `ViewYawMin`, `ViewYawMax`, `ViewRollMin`, `ViewRollMax`): These values are used to configure the actual `APlayerCameraManager` during `BeginPlay`.
+
+## Interaction with Other Systems
+
+* **`ACharacter` & `APlayerController`**: Essential for context (location, rotation, capsule, PlayerCameraManager).
+* **`APlayerCameraManager`**: Configured by `UMotionCameraComponent` for view limits and read from for pitch clamping.
+* **`UMotionCurveFunctionLibrary`**: Used to evaluate `FRuntimeVectorCurve` assets.
+* **`FMotionVectorSimulation`**: Provides previous view transform for motion vector generation.
+* **Other Motion Components (e.g., `UMotionBreatheComponent`, `UMotionSprintComponent`)**: These components interact with `UMotionCameraComponent` by calling its public API functions (e.g., `AddRotationCurve`, `SetPauseRotationCurve`) to apply or modify camera effects based on gameplay states.

@@ -1,0 +1,84 @@
+# Motion Animation Instance
+
+The `UMotionAnimInstance` is an Animation Instance class that allows mapping of gameplay tags to variables in the Animation Blueprint.
+
+## Overview
+
+This specialized Animation Instance provides integration with the Gameplay Ability System, making it easy to drive animation states and transitions based on gameplay tags. It automatically updates boolean properties in your Animation Blueprint when tag states change on the character's Ability System Component.
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `GameplayTagPropertyMap` | `FGameplayTagBlueprintPropertyMap` | Map of Gameplay Tags to Blueprint properties |
+| `GroundDistance` | `float` | Distance to the ground (read-only) |
+
+## Functions
+
+| Function | Return Type | Description |
+|----------|-------------|-------------|
+| `InitializeWithAbilitySystem` | `void` | Initializes the Gameplay Tag Property Map with the Ability System Component |
+| `GetSocketTransform` | `FTransform` | Returns the transform of a socket relative to the actor's transform |
+
+## Usage
+
+The `UMotionAnimInstance` provides a simple way to drive animation states through the Gameplay Ability System's tag system. This allows for a clean separation between game logic and animation logic.
+
+### Setting Up the Tag Property Map
+
+In the Animation Blueprint class defaults:
+
+1. Define properties in your Animation Blueprint (e.g., `bIsCrouching`, `bIsJumping`, `bIsSprinting`)
+2. Configure the `GameplayTagPropertyMap` to map these properties to corresponding gameplay tags:
+   - Map `bIsCrouching` to `State.Movement.Crouching`
+   - Map `bIsJumping` to `State.Movement.Jumping`
+   - Map `bIsSprinting` to `State.Movement.Sprinting`
+
+### Initializing with the Ability System
+
+In your character class:
+
+```cpp
+// After confirming ASC is valid and initialized
+UMotionAnimInstance* AnimInstance = Cast<UMotionAnimInstance>(SkeletalMeshComponent->GetAnimInstance());
+if (AnimInstance)
+{
+    AnimInstance->InitializeWithAbilitySystem(AbilitySystemComponent);
+}
+```
+
+## Blueprint Usage
+
+To use `UMotionAnimInstance` in your project:
+
+1. **Create a Blueprint Animation Instance**:
+   - Create a new Animation Blueprint
+   - Set the parent class to `MotionAnimInstance` or your own subclass of it
+
+2. **Configure Tag Property Map**:
+   - In the Class Defaults of your Animation Blueprint
+   - Under "Motion|GameplayTags" section, add entries to the GameplayTagPropertyMap
+   - For each entry, specify a gameplay tag and a corresponding boolean property in your anim BP
+
+3. **Initialize from Character**:
+   - In your character's initialization (usually after ASC setup)
+   - Get the Animation Instance and cast to your specific Animation Blueprint class
+   - Call `Initialize With Ability System` and pass your ASC
+
+4. **Use Properties in AnimGraph**:
+   - The mapped boolean properties will automatically update when tags are added/removed
+   - Use these properties in state machine transitions or blend space selectors
+
+## Example
+
+If your character has these gameplay tags:
+- `State.Movement.Crouching`
+- `State.Movement.Jumping`
+- `State.Movement.Sprinting`
+
+You can create boolean variables in your Animation Blueprint:
+- `bIsCrouching`
+- `bIsJumping`
+- `bIsSprinting`
+
+Map them in the `GameplayTagPropertyMap`, and then use these variables to drive your animation state machine without needing to manually check for gameplay tags in your AnimGraph. 
