@@ -10,6 +10,16 @@
       },
       {
         "type": "link",
+        "name": "Known Issues",
+        "href": "/docs/known-issues"
+      },
+      {
+        "type": "link",
+        "name": "Supported Versions",
+        "href": "/docs/supported-versions"
+      },
+      {
+        "type": "link",
         "name": "Quick Start",
         "href": "/docs/quickstart"
       },
