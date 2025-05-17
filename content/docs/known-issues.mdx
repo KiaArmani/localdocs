@@ -10,10 +10,51 @@ This page tracks known issues, bugs, and limitations in the current and previous
 
 ## Current Preview (Motion 2.0 Preview 1)
 
-- Turn-in Place is not working, due to a disconnected node in the Animation Blueprint.
+### Animation & Movement
+
+* Turn-in-place functionality is broken due to a disconnected node in the Animation Blueprint.
+* In multiplayer, jumping does not work as expected.
+* When uncrouching while encroached, the player remains stuck in the crouched state.
+* Camera height when crouching does not properly reflect the change in capsule size.
+* When crouching, a stray "Hello" print string appears.
+
+### Camera & Spring Arm
+
+* Camera can clip through walls in some situations.
+* If a Spring Arm is used, its functionality is partially overridden by the camera component.
+* There is currently no way to debug the camera.
+* Lack of HUD makes it difficult to evaluate the feel of camera curves.
+
+### Debugging & Visibility
+
+* "Show Debug Information" does not work on any component except Crouch.
+* Capsule is visible by default when it should be hidden.
+* Movement Sound component's capsule trace debug is enabled by default.
+
+### Crouch Component
+
+* Crouch component performs capsule traces even when not crouching.
+* If the Ability System Component is spawned or added after this component's `BeginPlay`, a warning is triggered and the crouch component remains disabled for the rest of the session.
+
+### Movement Sound Component
+
+* When no surface is detected, no footsteps are played; a default (configurable) sound should play as fallback.
+* `DeriveMovementTypeTagFromState()` can return an invalid tag at start (before GAS tags are applied), suppressing footsteps until a tag is set.
+* PreviousVelocityZ is only cached if `OwningCharacterMovementComponent` is valid, but this pointer is never set in the class.
+* If used on an `ACharacter` without a `UMotionComponent`, landing-velocity logic will silently break.
+* `UEnum::GetValueAsString(EPhysicalSurface)` returns a string with the enum prefix and double-colon (e.g., "EPhysicalSurface::SurfaceType1"), which does not match data-table row names, causing lookups to fail and fallback to "Default".
+
+### Speed Sync Component
+
+* `UMotionSpeedSyncComponent` uses and sets the wrong member variable in several places (e.g., sets `OwningMotionCameraComponent` instead of `OwningAbilitySystemComponent`).
+* `OwningAbilitySystemComponent` is not initialized in the constructor.
+* `InitializeWithAbilitySystem` does not store the new ASC in `OwningAbilitySystemComponent`.
+* Incorrect variable checks and assignments in shutdown and error handling logic.
+
+---
 
 <InfoAlert>
   <AlertDescription>
-    This page is updated regularly. For the latest status, check the [Discord](https://kia.dev/motion1.6-discord) or the [changelog](/docs/). 
+    This page is updated regularly. For the latest status, check the [Discord](https://kia.dev/motion1.6-discord) or the [changelog](/docs/).
   </AlertDescription>
 </InfoAlert>
